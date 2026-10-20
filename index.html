@@ -147,6 +147,24 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
 .err{color:var(--bad);font-size:13px}
 .hint{font-size:12px;color:var(--muted)}
 
+.agent{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:10px}
+.agent-head{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.agent-head .who{display:flex;gap:8px;align-items:center;font-weight:700;font-size:14px}
+.agent-head .who .dot{width:8px;height:8px;border-radius:50%;background:var(--ai)}
+.report{background:var(--ai-soft);border-radius:8px;padding:12px 14px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.report .rh{font-size:12px;color:var(--ai);font-weight:700;margin-bottom:4px}
+.ask{display:flex;gap:8px;flex-wrap:wrap}
+.ask input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--bg)}
+.tasks{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.task{border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:14px;display:grid;gap:4px;min-width:0}
+.task .tq{display:flex;justify-content:space-between;gap:8px;align-items:start}
+.task .tq span:first-child{font-weight:500;overflow-wrap:anywhere}
+.task .tm{font-size:12px;color:var(--muted)}
+.task details summary{cursor:pointer;color:var(--ai);font-size:13px}
+.task .tr{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;margin-top:6px}
+.consult{border:1px dashed var(--ai);border-radius:8px;padding:12px 14px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.pill.auto{background:var(--gold-soft);color:var(--gold)}
+
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:4px;z-index:20}
 
 @media (max-width:760px){.horizons,.ladder{grid-template-columns:minmax(0,1fr)}.rung+.rung{border-left:0;border-top:1px solid var(--line)}.creed{grid-template-columns:minmax(0,1fr)}.creed-side{align-items:start}}
@@ -216,6 +234,20 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     <div class="field"><label for="k-dir">良い方向</label><select id="k-dir"><option value="up">大きいほど良い</option><option value="down">小さいほど良い</option></select></div>
     <div class="field" id="k-due-f"><label for="k-due">期限</label><input id="k-due" type="date"></div>
   </div>
+  <div class="row2">
+    <div class="field"><label for="k-auto">エージェントが自動で入力</label><select id="k-auto">
+      <option value="">しない（手入力）</option>
+      <option value="freee:sales">freee：売上高</option>
+      <option value="freee:sga_ratio">freee：販管費率（%）</option>
+      <option value="freee:operating_profit">freee：営業利益</option>
+      <option value="shopify:sales">Shopify：売上合計</option>
+      <option value="shopify:orders">Shopify：注文数</option>
+      <option value="shopify:new_customers">Shopify：新規顧客数</option>
+      <option value="shopify:repeat_rate">Shopify：リピート率（%）</option>
+      <option value="custom">その他（下のメモで指定）</option>
+    </select></div>
+    <div class="field"><label for="k-autonote">取り方のメモ（任意）</label><input id="k-autonote" maxlength="200" placeholder="例：定期便タグの注文だけ数える"></div>
+  </div>
   <div class="field"><label>実績（直近12か月）</label><span class="hint" id="k-hint"></span><div class="months" id="k-months"></div></div>
   <div class="err" id="k-err" hidden></div>
   <div class="dlg-foot">
@@ -234,6 +266,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   </div>
   <div class="field"><label for="p-st">状況</label><select id="p-st"><option value="todo">これから</option><option value="doing">進行中</option><option value="done">完了</option></select></div>
   <div class="field"><label for="p-note">ねらい・やること</label><textarea id="p-note" rows="3" maxlength="400"></textarea></div>
+  <div class="field"><label for="p-agent">担当エージェントへの指示（任意）</label><textarea id="p-agent" rows="3" maxlength="600" placeholder="例：毎月、定期便の解約理由の傾向も見て改善案を出して"></textarea><span class="hint">毎月1日のレビューと、依頼への回答のときにエージェントが読みます。</span></div>
   <div class="err" id="p-err" hidden></div>
   <div class="dlg-foot">
     <span id="p-del-wrap"><button class="btn ghost danger" type="button" id="p-del">削除</button></span>
@@ -273,7 +306,8 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   const VST = {todo:["これから","none"],doing:["進行中","warn"],done:["実現した","ok"]};
   const PST = {todo:["これから","none"],doing:["進行中","warn"],done:["完了","ok"]};
   let db=null, assets=null;
-  let kpis=[], visions=[], projects=[], creed={};
+  let kpis=[], visions=[], projects=[], creed={}, tasks=[];
+  let sample=null, user=null; const consults={}; const names={}; const drafts={};
   const loaded={kpis:false,vision:false,projects:false};
   let focusVision=null;
   const now=new Date();
@@ -394,6 +428,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     const meta=el("div","meta");
     const p=el("span","pill "+jc,jl);meta.appendChild(p);
     if(k.example)meta.appendChild(el("span","pill sample","サンプル"));
+    if(k.autoSource)meta.appendChild(el("span","pill auto","自動"));
     meta.appendChild(el("span",null,"達成率 "+(r==null?"—":Math.round(r*100)+"%")));
     if(lt)meta.appendChild(el("span",null,ymLabel(lt.key)+"時点"));
     const dl=daysLeft(k.due);
@@ -409,6 +444,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     top.appendChild(el("div","kpi-name",k.name||"(名称なし)"));
     const pills=el("div","pills");
     if(k.example)pills.appendChild(el("span","pill sample","サンプル"));
+    if(k.autoSource)pills.appendChild(el("span","pill auto","自動"));
     pills.appendChild(el("span","pill "+jc,jl));top.appendChild(pills);
     const val=el("div","kpi-val");
     val.append(el("span","v",fmt(v)),el("span","t",(k.unit||"")+"　/ 月目標 "+fmt(k.target)+(k.unit||"")));
@@ -420,6 +456,11 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   }
 
   function renderProjects(){
+    const fid=document.activeElement&&document.activeElement.id&&document.activeElement.id.startsWith("ask-")?document.activeElement.id:null;
+    renderProjectsInner();
+    if(fid){const e=document.getElementById(fid);if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}}
+  }
+  function renderProjectsInner(){
     $("#m-label").textContent=`${cur.y}年${cur.m}月`;
     const key=ym(cur.y,cur.m), keys=last12(cur);
     const box=$("#proj-list");box.textContent="";
@@ -471,6 +512,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
         const a1=el("button","btn small","＋ KGI");a1.type="button";a1.addEventListener("click",()=>openKpi(null,{kind:"kgi",projectId:p.id}));
         const a2=el("button","btn small","＋ KPI");a2.type="button";a2.addEventListener("click",()=>openKpi(null,{kind:"kpi",projectId:p.id}));
         add.append(a1,a2);sec.appendChild(add);
+        sec.appendChild(agentBlock(p,mine));
       }
       box.appendChild(sec);
     };
@@ -482,6 +524,76 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
       s.appendChild(el("span",null,cur.m+"月の指標："));
       [["ok","達成"],["warn","あと一歩"],["bad","要注意"],["none","未入力"]].forEach(([k,l])=>{const sp=el("span");sp.append(el("b",null,String(counts[k])),l);s.appendChild(sp)});
     }
+  }
+  const TST={pending:["受付済み","none"],working:["対応中","warn"],done:["回答あり","ok"],error:["できなかった","bad"]};
+  const when=iso=>{if(!iso)return "";const d=new Date(iso);return isNaN(d)?"":`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`};
+  function agentBlock(p,mine){
+    const box=el("div","agent");
+    const hd=el("div","agent-head");
+    const who=el("div","who");who.append(el("span","dot"),el("span",null,"担当エージェント"));
+    const consultBtn=el("button","btn small","AIに相談");consultBtn.type="button";consultBtn.hidden=!sample;
+    consultBtn.addEventListener("click",()=>consult(p,mine));
+    hd.append(who,consultBtn);box.appendChild(hd);
+    if(p.agentReport&&p.agentReport.text){
+      const r=el("div","report");r.append(el("div","rh",(p.agentReport.period?ymLabel(p.agentReport.period)+"の":"")+"月次レビュー・"+when(p.agentReport.at)),document.createTextNode(p.agentReport.text));box.appendChild(r);
+    } else box.appendChild(el("div","note","毎月1日の朝、エージェントが自動入力の指標を更新し、ここに月次レビューを書き込みます。"));
+    const c=consults[p.id];
+    if(c){const d=el("div","consult",c.text||"考えています…");d.id="consult-"+p.id;d.setAttribute("aria-live","polite");box.appendChild(d)}
+    const mineT=tasks.filter(t=>t.projectId===p.id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,5);
+    if(mineT.length){
+      const ul=el("ul","tasks");
+      mineT.forEach(t=>{
+        const li=el("li","task");const st=TST[t.status]||TST.pending;
+        const q=el("div","tq");q.append(el("span",null,t.request||""),el("span","pill "+st[1],st[0]));li.appendChild(q);
+        const nm=t.createdBy&&names[t.createdBy];
+        li.appendChild(el("div","tm",[when(t.createdAt)+" 依頼",nm?nm:"",t.finishedAt?when(t.finishedAt)+" 回答":""].filter(Boolean).join("・")));
+        if(t.result){const dt=el("details");if(t===mineT[0])dt.open=true;dt.append(el("summary",null,"回答を見る"),el("div","tr",t.result));li.appendChild(dt)}
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+    }
+    const f=el("div","ask");
+    const inp=el("input");inp.id="ask-"+p.id;inp.maxLength=300;inp.placeholder="エージェントへの依頼（例：競合3社の価格を調べて）";inp.setAttribute("aria-label","エージェントへの依頼");inp.value=drafts[p.id]||"";inp.addEventListener("input",()=>{drafts[p.id]=inp.value});
+    const b=el("button","btn small","依頼する");b.type="button";
+    const msg=el("span","note");
+    b.addEventListener("click",async()=>{
+      const text=inp.value.trim();if(!text)return;
+      if(!db){msg.textContent="依頼するにはサインインが必要です。";return}
+      b.disabled=true;
+      try{
+        const by=user&&user.id?await user.id().catch(()=>null):null;
+        await db.collection("agentTasks").add({projectId:p.id,request:text,status:"pending",createdAt:stamp(),createdBy:by||""});
+        inp.value="";drafts[p.id]="";msg.textContent="受け付けました。エージェントは毎朝9時ごろに対応します。";
+      }catch(x){msg.textContent=errMsg(x)}
+      b.disabled=false;
+    });
+    f.append(inp,b);box.append(f,msg);
+    return box;
+  }
+  async function consult(p,mine){
+    if(!sample)return;
+    const v=visions.find(v=>v.id===p.visionId);
+    const keys=last12(cur);
+    const data={vision:v?{title:v.title,horizon:v.horizon+"年後"}:null,project:{title:p.title,owner:p.owner,due:p.due,status:p.status,note:p.note,agentInstructions:p.agentInstructions},
+      indicators:mine.map(k=>({kind:k.kind||"kpi",name:k.name,unit:k.unit,target:k.target,direction:k.direction==="down"?"小さいほど良い":"大きいほど良い",due:k.due||undefined,values:Object.fromEntries(keys.filter(x=>valOf(k,x)!=null).map(x=>[x,valOf(k,x)]))})),
+      today:new Date().toISOString().slice(0,10)};
+    consults[p.id]={text:""};renderProjects();
+    try{
+      const r=await sample("あなたは中小企業の経営参謀です。次のプロジェクトのデータ（JSON）を読み、日本語で簡潔に答えてください。\n"+
+        "1. 現状（KGIの達成見込みとKPIの傾向。数字を引用）\n2. 遅れているなら考えられる原因（仮説を2〜3個）\n3. 今月やるべき打ち手（具体的に3つまで）\n"+
+        "見出しは「現状」「原因の仮説」「今月の打ち手」。全体で400字程度。データにないことは推測と明記。\n\n"+JSON.stringify(data),
+        {modelTier:"default",onText:({text})=>{consults[p.id]={text};const d=document.getElementById("consult-"+p.id);if(d)d.textContent=text}});
+      consults[p.id]={text:r.text};
+    }catch(x){
+      consults[p.id]={text:x&&x.code==="not_granted"?"AIへの相談が許可されていません。":x&&x.code==="rate_limited"?"混み合っています。少し待ってからもう一度押してください。":"相談できませんでした（"+(x&&x.message||"不明なエラー")+"）。"};
+    }
+    renderProjects();
+  }
+  async function resolveNames(){
+    if(!user||!user.profiles)return;
+    const ids=[...new Set(tasks.map(t=>t.createdBy).filter(id=>id&&!(id in names)))];
+    if(!ids.length)return;
+    try{const ps=await user.profiles(ids);ids.forEach(id=>{names[id]=(ps[id]&&ps[id].name)||""});renderProjects()}catch(_){}
   }
   function updateSampleBtn(){$("#clear-samples").hidden=!db||![...kpis,...visions,...projects].some(x=>x.example)}
 
@@ -523,7 +635,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     sel.value=src.projectId&&projects.some(p=>p.id===src.projectId)?src.projectId:"";
     $("#k-kind").value=src.kind==="kgi"?"kgi":"kpi";
     $("#k-name").value=src.name||"";$("#k-unit").value=src.unit||"";
-    $("#k-target").value=src.target??"";$("#k-dir").value=src.direction||"up";$("#k-due").value=src.due||"";
+    $("#k-target").value=src.target??"";$("#k-dir").value=src.direction||"up";$("#k-due").value=src.due||"";$("#k-auto").value=src.autoSource||"";$("#k-autonote").value=src.autoNote||"";
     const mb=$("#k-months");mb.textContent="";
     last12(cur).slice().reverse().forEach(key=>{
       const f=el("div","field");const id="km-"+key;const lb=el("label",null,ymLabel(key));lb.htmlFor=id;
@@ -540,7 +652,8 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     $("#k-months").querySelectorAll("input").forEach(i=>{if(i.value==="")delete values[i.dataset.key];else values[i.dataset.key]=Number(i.value)});
     const kind=$("#k-kind").value;
     const data={kind,projectId:$("#k-proj").value,name:$("#k-name").value.trim(),unit:$("#k-unit").value.trim(),
-      target:Number($("#k-target").value),direction:$("#k-dir").value,due:kind==="kgi"?$("#k-due").value:"",values,updatedAt:stamp()};
+      target:Number($("#k-target").value),direction:$("#k-dir").value,due:kind==="kgi"?$("#k-due").value:"",autoSource:$("#k-auto").value,autoNote:$("#k-autonote").value.trim(),values,updatedAt:stamp()};
+    if(editingKpi&&editingKpi.autoUpdatedAt)data.autoUpdatedAt=editingKpi.autoUpdatedAt;
     try{
       if(editingKpi)await db.doc("kpis/"+editingKpi.id).set(Object.assign({order:editingKpi.order??0,example:false},data));
       else await db.collection("kpis").add(Object.assign({order:kpis.length},data));
@@ -558,14 +671,15 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     sel.appendChild(Object.assign(el("option",null,"（未設定）"),{value:""}));
     HZ.forEach(h=>visions.filter(v=>String(v.horizon)===h.k).sort(byOrder).forEach(v=>sel.appendChild(Object.assign(el("option",null,h.label+"｜"+v.title),{value:v.id}))));
     const vid=p?.visionId??focusVision??"";sel.value=visions.some(v=>v.id===vid)?vid:"";
-    $("#p-title").value=p?.title||"";$("#p-owner").value=p?.owner||"";$("#p-due").value=p?.due||"";$("#p-st").value=p?.status||"doing";$("#p-note").value=p?.note||"";
+    $("#p-title").value=p?.title||"";$("#p-owner").value=p?.owner||"";$("#p-due").value=p?.due||"";$("#p-st").value=p?.status||"doing";$("#p-note").value=p?.note||"";$("#p-agent").value=p?.agentInstructions||"";
     $("#p-err").hidden=true;resetDel("#p-del");$("#p-del-wrap").hidden=!editingP;
     $("#dlg-proj").showModal();
   }
   $("#add-proj").addEventListener("click",()=>openProj(null));
   $("#f-proj").addEventListener("submit",async e=>{
     e.preventDefault();const err=$("#p-err");if(!requireDb(err))return;
-    const data={title:$("#p-title").value.trim(),visionId:$("#p-vision").value,owner:$("#p-owner").value.trim(),due:$("#p-due").value,status:$("#p-st").value,note:$("#p-note").value.trim(),updatedAt:stamp()};
+    const data={title:$("#p-title").value.trim(),visionId:$("#p-vision").value,owner:$("#p-owner").value.trim(),due:$("#p-due").value,status:$("#p-st").value,note:$("#p-note").value.trim(),agentInstructions:$("#p-agent").value.trim(),updatedAt:stamp()};
+    if(editingP&&editingP.agentReport)data.agentReport=editingP.agentReport;
     try{
       if(editingP)await db.doc("projects/"+editingP.id).set(Object.assign({order:editingP.order??0,example:false},data));
       else await db.collection("projects").add(Object.assign({order:projects.length},data));
@@ -637,11 +751,14 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     db=await window.claude.use("db");
     if(!db)return done("サインインすると保存・共有できます");
     window.claude.use("assets").then(a=>{assets=a}).catch(()=>{});
+    window.claude.use("sample").then(s=>{sample=s;renderProjects()}).catch(()=>{});
+    window.claude.use("user").then(u=>{user=u;resolveNames()}).catch(()=>{});
     setStatus("");
     const onErr=x=>setStatus(errMsg(x).replace("保存","読み込み"));
     const docs=s=>s.docs.map(d=>Object.assign({id:d.id},d.data()));
     db.collection("kpis").onSnapshot(s=>{kpis=docs(s);loaded.kpis=true;renderAll()},onErr);
     db.collection("projects").onSnapshot(s=>{projects=docs(s);loaded.projects=true;renderAll()},onErr);
+    db.collection("agentTasks").onSnapshot(s=>{tasks=docs(s);renderProjects();resolveNames()},onErr);
     db.collection("vision").onSnapshot(s=>{visions=docs(s);loaded.vision=true;renderAll()},onErr);
     db.doc("board/creed").onSnapshot(s=>{creed=s.exists?s.data():{};renderCreed()},onErr);
   })();

@@ -6,10 +6,16 @@
 ツールが読み込まれていなければ ToolSearch で `select:ArtifactData` を読み込んでください。
 日付と時刻はすべて日本時間（Asia/Tokyo）で扱います。
 
+## 会社の目標の階層
+ミッション（存在意義）→ ビジョン（目指す姿）→ プロジェクト（KGI/KPI ＋ 改善）。
+判断や提案は、必ずミッションとビジョンにつながる形で行う。
+
 ## データの形
+- `board/creed`: company, mission, vision（会社のミッションとビジョン）
 - `projects/<id>`: title, visionId, owner, due, status, note, agentInstructions（担当エージェントへの指示）, agentReport（あなたが書く月次レビュー `{period:"YYYY-MM", text, at}`）
 - `kpis/<id>`: kind（kgi|kpi）, projectId, name, unit, target, direction（up|down）, due, values（`{"YYYY-MM": 数値}`）, autoSource, autoNote, autoUpdatedAt
 - `vision/<id>`: title, horizon（1|3|10 年後）, status
+- `improvements/<id>`: projectId, issue（課題）, action（打ち手）, kpiId（効かせたい指標）, status（idea 候補|doing 実行中|done 完了|dropped 見送り）, owner, due, result（結果・学び）, source（human|agent）, createdAt
 - `agentTasks/<id>`: projectId, request, status（pending|working|done|error）, createdAt, result, finishedAt
 - 書き込みは必ず読んだときの `version` を `if_version` に付けます。競合したら読み直してやり直します。
 
@@ -43,8 +49,14 @@ KGI で累計の指標（名前に「累計」）は、前回値に前月分を�
 ### B. 月次レビュー（status が done 以外の全プロジェクト）
 プロジェクトの KGI/KPI の直近12か月、ビジョン、`note`、`agentInstructions` を読み、
 `agentReport` に `{period: 対象月, text, at: 現在時刻}` を書く。text は日本語400字程度で、
-「現状（数字を引用）」「気になる点」「今月の打ち手（3つまで）」の3見出し。
+「現状（数字を引用）」「改善の振り返り」「今月の打ち手」の3見出し。
+「改善の振り返り」では、実行中・前月に完了した改善と、効かせたい指標の動きを結び付けて評価する。
 推測は推測と明記する。
+
+### C. 改善の候補を出す（status が done 以外の全プロジェクト）
+B を踏まえ、`improvements` に新しい候補を最大2件追加する（`status: "idea"`, `source: "agent"`, `createdAt` は現在時刻）。
+既にある候補・実行中の改善と重なるものは出さない。`issue` には数字の根拠を、`kpiId` には効かせたい指標の id を入れる。
+既存の改善の status や result は書き換えない（判断するのは人）。
 
 ## 最後に
 何を処理したか（依頼の件数、自動入力した指標、エラー）を短くまとめて終える。

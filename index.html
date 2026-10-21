@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: 理念の帯 → 階層マップ → ビジョン（時間軸の3列）→ プロジェクトごとの KGI / KPI */
+/* Layout: ミッション（存在意義）→ 階層マップ → ビジョン（目指す姿＋時間軸の3列）→ プロジェクト（KGI/KPI＋改善） */
 :root{
   --bg:#f3f4f1; --surface:#ffffff; --ink:#1c2230; --muted:#5f6675; --line:#d9dcd6;
   --ai:#27466f; --ai-soft:#e3e9f2; --gold:#a8792a; --gold-soft:#f3ead9;
@@ -165,6 +165,30 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
 .consult{border:1px dashed var(--ai);border-radius:8px;padding:12px 14px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
 .pill.auto{background:var(--gold-soft);color:var(--gold)}
 
+.vision-statement{font-family:var(--f-display);font-weight:800;font-size:clamp(20px,3vw,28px);line-height:1.4;margin:0 0 18px;max-width:40ch}
+.imp{display:grid;gap:8px}
+.imp-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.imp-head .counts{font-size:13px;color:var(--muted);display:flex;gap:12px}
+.imp-head .counts b{font-family:var(--f-num);color:var(--ink);margin-right:2px}
+.imp-list{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.imp-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:start;border:1px solid var(--line);border-radius:6px;padding:8px 12px;text-align:left;background:var(--surface);width:100%;font-size:14px}
+.imp-item:hover{border-color:var(--ai)}
+.imp-item .st{width:10px;height:10px;border-radius:50%;margin-top:6px;border:2px solid var(--muted)}
+.imp-item .st.doing{border-color:var(--warn);background:var(--warn)}
+.imp-item .st.done{border-color:var(--ok);background:var(--ok)}
+.imp-item .st.dropped{border-color:var(--line);background:var(--line)}
+.imp-item .body{display:grid;gap:2px;min-width:0}
+.imp-item .iss{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.imp-item .act{font-weight:500;overflow-wrap:anywhere}
+.imp-item .res{font-size:13px;color:var(--ok);overflow-wrap:anywhere}
+.imp-item.done .act,.imp-item.dropped .act{color:var(--muted)}
+.imp-item .side{font-size:12px;color:var(--muted);text-align:right;display:grid;gap:2px;justify-items:end}
+.consult h5{margin:8px 0 2px;font-size:13px;color:var(--ai)}
+.consult h5:first-child{margin-top:0}
+.consult ul{margin:0;padding-left:1.2em}
+.consult .acts li{margin-bottom:4px}
+.consult .acts button{margin-left:6px}
+
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:4px;z-index:20}
 
 @media (max-width:760px){.horizons,.ladder{grid-template-columns:minmax(0,1fr)}.rung+.rung{border-left:0;border-top:1px solid var(--line)}.creed{grid-template-columns:minmax(0,1fr)}.creed-side{align-items:start}}
@@ -174,34 +198,34 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
 <div class="wrap">
   <header class="creed">
     <div>
-      <div class="co" id="co-name">会社名</div>
-      <h1 id="vision-text">ビジョンを書き込んでください</h1>
-      <p class="mission"><b>ミッション</b><span id="mission-text">ミッションを書き込むと、ここに表示されます。</span></p>
+      <div class="co"><span id="co-name">会社名</span>　・　MISSION</div>
+      <h1 id="mission-text">ミッション（私たちは何のために存在するか）を書き込んでください</h1>
     </div>
     <div class="creed-side">
-      <button class="btn" id="edit-creed" type="button">理念を編集</button>
+      <button class="btn" id="edit-creed" type="button">ミッション・ビジョンを編集</button>
       <button class="btn" type="button" id="clear-samples" hidden>サンプルをすべて削除</button>
       <span class="status" id="status">読み込み中…</span>
     </div>
   </header>
 
   <div class="ladder" aria-label="目標の階層">
-    <div class="rung"><span class="lv">LEVEL 1</span><span class="nm">ビジョン</span><span class="ct"><b id="c-vis">—</b>件のありたい姿</span></div>
-    <div class="rung"><span class="lv">LEVEL 2</span><span class="nm">プロジェクト</span><span class="ct"><b id="c-proj">—</b>件が進行中</span></div>
-    <div class="rung"><span class="lv">LEVEL 3</span><span class="nm">KGI / KPI</span><span class="ct"><b id="c-kgi">—</b>KGI ・ <b id="c-kpi">—</b>KPI</span></div>
+    <div class="rung"><span class="lv">LEVEL 1</span><span class="nm">ミッション</span><span class="ct">存在意義。すべての判断の軸</span></div>
+    <div class="rung"><span class="lv">LEVEL 2</span><span class="nm">ビジョン</span><span class="ct"><b id="c-vis">—</b>件のありたい姿</span></div>
+    <div class="rung"><span class="lv">LEVEL 3</span><span class="nm">プロジェクト＋改善</span><span class="ct"><b id="c-proj">—</b>件進行中 ・ 改善 <b id="c-imp">—</b>件実行中</span></div>
   </div>
 
   <section id="vision">
     <div class="sec-head">
-      <div><div class="eyebrow">LEVEL 1 · VISION</div><h2>ビジョン</h2></div>
+      <div><div class="eyebrow">LEVEL 2 · VISION</div><h2>ビジョン</h2></div>
       <span class="note">カードの「プロジェクトを見る」で、そのビジョンにつながるプロジェクトだけを表示します。</span>
     </div>
+    <p class="vision-statement" id="vision-text">目指す姿を「ミッション・ビジョンを編集」から書き込んでください</p>
     <div class="horizons" id="horizons"></div>
   </section>
 
   <section id="projects">
     <div class="sec-head">
-      <div><div class="eyebrow">LEVEL 2–3 · PROJECTS / KGI / KPI</div><h2>プロジェクトと指標</h2></div>
+      <div><div class="eyebrow">LEVEL 3 · PROJECTS / KGI · KPI / KAIZEN</div><h2>プロジェクト＋改善</h2></div>
       <div class="tools">
         <div class="month" role="group" aria-label="表示する月">
           <button type="button" id="m-prev" aria-label="前の月">◀</button>
@@ -290,11 +314,31 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   </div>
 </form></dialog>
 
+<dialog id="dlg-imp"><form class="dlg" id="f-imp">
+  <h3 id="i-dlg-title">改善を追加</h3>
+  <div class="field"><label for="i-issue">課題・気づき</label><textarea id="i-issue" rows="2" maxlength="300" placeholder="例：定期便の2回目で解約する人が多い"></textarea></div>
+  <div class="field"><label for="i-action">打ち手</label><input id="i-action" required maxlength="120" placeholder="例：2回目の同梱物にお茶の淹れ方カードを入れる"></div>
+  <div class="row2">
+    <div class="field"><label for="i-kpi">効かせたい指標</label><select id="i-kpi"></select></div>
+    <div class="field"><label for="i-st">状況</label><select id="i-st"><option value="idea">候補</option><option value="doing">実行中</option><option value="done">完了</option><option value="dropped">見送り</option></select></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label for="i-owner">担当</label><input id="i-owner" maxlength="30"></div>
+    <div class="field"><label for="i-due">期限</label><input id="i-due" type="date"></div>
+  </div>
+  <div class="field"><label for="i-result">結果・学び</label><textarea id="i-result" rows="2" maxlength="400" placeholder="完了したら、数字がどう動いたか・次に何を変えるか"></textarea></div>
+  <div class="err" id="i-err" hidden></div>
+  <div class="dlg-foot">
+    <span id="i-del-wrap"><button class="btn ghost danger" type="button" id="i-del">削除</button></span>
+    <div class="r"><button class="btn" type="button" data-close>閉じる</button><button class="btn primary" type="submit">保存</button></div>
+  </div>
+</form></dialog>
+
 <dialog id="dlg-creed"><form class="dlg" id="f-creed">
-  <h3>理念を編集</h3>
+  <h3>ミッション・ビジョンを編集</h3>
   <div class="field"><label for="c-co">会社名</label><input id="c-co" maxlength="60"></div>
-  <div class="field"><label for="c-vision">ビジョン（目指す姿）</label><textarea id="c-vision" rows="2" maxlength="120"></textarea></div>
-  <div class="field"><label for="c-mission">ミッション（果たす役割）</label><textarea id="c-mission" rows="3" maxlength="240"></textarea></div>
+  <div class="field"><label for="c-mission">ミッション（私たちは何のために存在するか）</label><textarea id="c-mission" rows="3" maxlength="240"></textarea></div>
+  <div class="field"><label for="c-vision">ビジョン（ミッションを果たした先の、目指す姿）</label><textarea id="c-vision" rows="2" maxlength="120"></textarea></div>
   <div class="err" id="c-err" hidden></div>
   <div class="dlg-foot"><div class="r"><button class="btn" type="button" data-close>閉じる</button><button class="btn primary" type="submit">保存</button></div></div>
 </form></dialog>
@@ -306,7 +350,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   const VST = {todo:["これから","none"],doing:["進行中","warn"],done:["実現した","ok"]};
   const PST = {todo:["これから","none"],doing:["進行中","warn"],done:["完了","ok"]};
   let db=null, assets=null;
-  let kpis=[], visions=[], projects=[], creed={}, tasks=[];
+  let kpis=[], visions=[], projects=[], creed={}, tasks=[], imps=[];
   let sample=null, user=null; const consults={}; const names={}; const drafts={};
   const loaded={kpis:false,vision:false,projects:false};
   let focusVision=null;
@@ -345,14 +389,13 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   function renderAll(){renderCreed();renderLadder();renderVision();renderProjects();updateSampleBtn()}
   function renderCreed(){
     $("#co-name").textContent=creed.company||"会社名";
-    $("#vision-text").textContent=creed.vision||"ビジョンを書き込んでください";
-    $("#mission-text").textContent=creed.mission||"ミッションを書き込むと、ここに表示されます。";
+    $("#vision-text").textContent=creed.vision||"目指す姿を「ミッション・ビジョンを編集」から書き込んでください";
+    $("#mission-text").textContent=creed.mission||"ミッション（私たちは何のために存在するか）を書き込んでください";
   }
   function renderLadder(){
     $("#c-vis").textContent=visions.length;
     $("#c-proj").textContent=projects.filter(p=>p.status!=="done").length;
-    $("#c-kgi").textContent=kpis.filter(isKgi).length;
-    $("#c-kpi").textContent=kpis.filter(k=>!isKgi(k)).length;
+    $("#c-imp").textContent=imps.filter(i=>i.status==="doing").length;
   }
 
   function spark(k,keys){
@@ -512,6 +555,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
         const a1=el("button","btn small","＋ KGI");a1.type="button";a1.addEventListener("click",()=>openKpi(null,{kind:"kgi",projectId:p.id}));
         const a2=el("button","btn small","＋ KPI");a2.type="button";a2.addEventListener("click",()=>openKpi(null,{kind:"kpi",projectId:p.id}));
         add.append(a1,a2);sec.appendChild(add);
+        sec.appendChild(impBlock(p,mine));
         sec.appendChild(agentBlock(p,mine));
       }
       box.appendChild(sec);
@@ -538,7 +582,26 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
       const r=el("div","report");r.append(el("div","rh",(p.agentReport.period?ymLabel(p.agentReport.period)+"の":"")+"月次レビュー・"+when(p.agentReport.at)),document.createTextNode(p.agentReport.text));box.appendChild(r);
     } else box.appendChild(el("div","note","毎月1日の朝、エージェントが自動入力の指標を更新し、ここに月次レビューを書き込みます。"));
     const c=consults[p.id];
-    if(c){const d=el("div","consult",c.text||"考えています…");d.id="consult-"+p.id;d.setAttribute("aria-live","polite");box.appendChild(d)}
+    if(c){
+      const d=el("div","consult");d.id="consult-"+p.id;d.setAttribute("aria-live","polite");
+      const j=c.json;
+      if(j&&typeof j==="object"){
+        if(j.status){d.append(el("h5",null,"現状"),el("div",null,String(j.status)))}
+        if(Array.isArray(j.causes)&&j.causes.length){d.appendChild(el("h5",null,"原因の仮説"));const ul=el("ul");j.causes.slice(0,3).forEach(x=>ul.appendChild(el("li",null,String(x))));d.appendChild(ul)}
+        if(Array.isArray(j.actions)&&j.actions.length){
+          d.appendChild(el("h5",null,"打ち手"));const ul=el("ul","acts");
+          j.actions.slice(0,3).forEach(a=>{
+            const li=el("li",null,String(a.action||""));
+            const k=kpis.find(k=>k.projectId===p.id&&k.name===a.kpi);
+            const ad=el("button","btn small","改善に追加");ad.type="button";
+            ad.addEventListener("click",()=>openImp(null,{projectId:p.id,issue:String(a.issue||""),action:String(a.action||""),kpiId:k?k.id:"",status:"idea",source:"agent"}));
+            li.appendChild(ad);ul.appendChild(li);
+          });
+          d.appendChild(ul);
+        }
+      } else d.textContent=c.text||"考えています…";
+      box.appendChild(d);
+    }
     const mineT=tasks.filter(t=>t.projectId===p.id).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,5);
     if(mineT.length){
       const ul=el("ul","tasks");
@@ -570,6 +633,69 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     f.append(inp,b);box.append(f,msg);
     return box;
   }
+  const IST={idea:"候補",doing:"実行中",done:"完了",dropped:"見送り"};
+  const IORD={doing:0,idea:1,done:2,dropped:3};
+  function impBlock(p,mine){
+    const box=el("div","imp");
+    const list=imps.filter(i=>i.projectId===p.id).sort((a,b)=>(IORD[a.status]??9)-(IORD[b.status]??9)||String(b.createdAt).localeCompare(String(a.createdAt)));
+    const hd=el("div","imp-head");
+    const t=el("div","sub","改善（KAIZEN）");
+    const cs=el("div","counts");
+    [["doing","実行中"],["idea","候補"],["done","完了"]].forEach(([k,l])=>{const sp=el("span");sp.append(el("b",null,String(list.filter(i=>i.status===k).length)),l);cs.appendChild(sp)});
+    const add=el("button","btn small","＋ 改善");add.type="button";add.addEventListener("click",()=>openImp(null,{projectId:p.id}));
+    const right=el("div","tools");right.append(cs,add);
+    hd.append(t,right);box.appendChild(hd);
+    if(!list.length){box.appendChild(el("div","note","課題と打ち手を書いて、実行・結果まで残します。「AIに相談」の打ち手からも追加できます。"));return box}
+    const ul=el("ul","imp-list");
+    const shown=list.filter(i=>i.status==="doing"||i.status==="idea").concat(list.filter(i=>i.status==="done"||i.status==="dropped").slice(0,3));
+    shown.forEach(i=>{
+      const li=el("li");const b=el("button","imp-item "+(i.status||"idea"));b.type="button";b.addEventListener("click",()=>openImp(i));
+      const st=el("span","st "+(i.status||"idea"));st.title=IST[i.status]||"候補";
+      const body=el("div","body");
+      if(i.issue)body.appendChild(el("span","iss","課題："+i.issue));
+      body.appendChild(el("span","act",i.action||""));
+      if(i.result)body.appendChild(el("span","res","結果："+i.result));
+      const side=el("div","side");
+      const k=kpis.find(k=>k.id===i.kpiId);
+      side.append(el("span",null,IST[i.status]||"候補"));
+      if(i.source==="agent")side.appendChild(el("span","pill auto","AI提案"));
+      if(k)side.appendChild(el("span",null,"→ "+k.name));
+      if(i.owner||i.due)side.appendChild(el("span",null,[i.owner,i.due?i.due.slice(5).replace("-","/"):""].filter(Boolean).join("・")));
+      b.append(st,body,side);li.appendChild(b);ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    const hidden=list.length-shown.length;
+    if(hidden>0)box.appendChild(el("div","note",`ほかに完了・見送り ${hidden}件`));
+    return box;
+  }
+
+  let editingI=null;
+  function openImp(i,preset){
+    editingI=i&&i.id?i:null;const src=i||preset||{};
+    $("#i-dlg-title").textContent=editingI?"改善を編集":"改善を追加";
+    const sel=$("#i-kpi");sel.textContent="";
+    sel.appendChild(Object.assign(el("option",null,"（指定しない）"),{value:""}));
+    kpis.filter(k=>k.projectId===src.projectId).sort(byOrder).forEach(k=>sel.appendChild(Object.assign(el("option",null,(isKgi(k)?"KGI：":"KPI：")+k.name),{value:k.id})));
+    sel.value=src.kpiId&&kpis.some(k=>k.id===src.kpiId)?src.kpiId:"";
+    $("#i-issue").value=src.issue||"";$("#i-action").value=src.action||"";$("#i-st").value=src.status||"idea";
+    $("#i-owner").value=src.owner||"";$("#i-due").value=src.due||"";$("#i-result").value=src.result||"";
+    $("#i-err").hidden=true;resetDel("#i-del");$("#i-del-wrap").hidden=!editingI;
+    $("#dlg-imp").dataset.project=src.projectId||"";$("#dlg-imp").dataset.source=src.source||"human";
+    $("#dlg-imp").showModal();
+  }
+  $("#f-imp").addEventListener("submit",async e=>{
+    e.preventDefault();const err=$("#i-err");if(!requireDb(err))return;
+    const d=$("#dlg-imp");
+    const data={projectId:editingI?editingI.projectId:d.dataset.project,issue:$("#i-issue").value.trim(),action:$("#i-action").value.trim(),kpiId:$("#i-kpi").value,
+      status:$("#i-st").value,owner:$("#i-owner").value.trim(),due:$("#i-due").value,result:$("#i-result").value.trim(),updatedAt:stamp()};
+    try{
+      if(editingI)await db.doc("improvements/"+editingI.id).set(Object.assign({source:editingI.source||"human",createdAt:editingI.createdAt||stamp(),example:false},data));
+      else await db.collection("improvements").add(Object.assign({source:d.dataset.source||"human",createdAt:stamp()},data));
+      d.close();setStatus("保存しました");
+    }catch(x){err.textContent=errMsg(x);err.hidden=false}
+  });
+  $("#i-del").addEventListener("click",e=>armedDelete(e.currentTarget,()=>db.doc("improvements/"+editingI.id).delete(),$("#i-err")));
+
   async function consult(p,mine){
     if(!sample)return;
     const v=visions.find(v=>v.id===p.visionId);
@@ -577,13 +703,16 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     const data={vision:v?{title:v.title,horizon:v.horizon+"年後"}:null,project:{title:p.title,owner:p.owner,due:p.due,status:p.status,note:p.note,agentInstructions:p.agentInstructions},
       indicators:mine.map(k=>({kind:k.kind||"kpi",name:k.name,unit:k.unit,target:k.target,direction:k.direction==="down"?"小さいほど良い":"大きいほど良い",due:k.due||undefined,values:Object.fromEntries(keys.filter(x=>valOf(k,x)!=null).map(x=>[x,valOf(k,x)]))})),
       today:new Date().toISOString().slice(0,10)};
+    const open=imps.filter(i=>i.projectId===p.id&&(i.status==="idea"||i.status==="doing")).map(i=>({status:IST[i.status],issue:i.issue,action:i.action}));
+    const done=imps.filter(i=>i.projectId===p.id&&i.status==="done").slice(0,5).map(i=>({action:i.action,result:i.result}));
+    data.improvements={open,done};
     consults[p.id]={text:""};renderProjects();
     try{
-      const r=await sample("あなたは中小企業の経営参謀です。次のプロジェクトのデータ（JSON）を読み、日本語で簡潔に答えてください。\n"+
-        "1. 現状（KGIの達成見込みとKPIの傾向。数字を引用）\n2. 遅れているなら考えられる原因（仮説を2〜3個）\n3. 今月やるべき打ち手（具体的に3つまで）\n"+
-        "見出しは「現状」「原因の仮説」「今月の打ち手」。全体で400字程度。データにないことは推測と明記。\n\n"+JSON.stringify(data),
-        {modelTier:"default",onText:({text})=>{consults[p.id]={text};const d=document.getElementById("consult-"+p.id);if(d)d.textContent=text}});
-      consults[p.id]={text:r.text};
+      const r=await sample.json("あなたは中小企業の経営参謀です。会社のミッション・ビジョンにつながるこのプロジェクトのデータ（JSON）を読み、日本語で答えてください。"+
+        "既にある改善（improvements.open）と重ならない打ち手を出し、完了した改善の結果も踏まえてください。データにないことは推測と明記。\n"+
+        "次の形のJSONだけを返す: {\"status\":\"現状（数字を引用、150字以内）\",\"causes\":[\"原因の仮説\",…最大3],\"actions\":[{\"issue\":\"課題\",\"action\":\"具体的な打ち手（60字以内）\",\"kpi\":\"効かせたい指標名\"},…最大3]}\n\n"+
+        JSON.stringify(Object.assign({mission:creed.mission||"",companyVision:creed.vision||""},data)),{modelTier:"default"});
+      consults[p.id]={json:r};
     }catch(x){
       consults[p.id]={text:x&&x.code==="not_granted"?"AIへの相談が許可されていません。":x&&x.code==="rate_limited"?"混み合っています。少し待ってからもう一度押してください。":"相談できませんでした（"+(x&&x.message||"不明なエラー")+"）。"};
     }
@@ -595,7 +724,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     if(!ids.length)return;
     try{const ps=await user.profiles(ids);ids.forEach(id=>{names[id]=(ps[id]&&ps[id].name)||""});renderProjects()}catch(_){}
   }
-  function updateSampleBtn(){$("#clear-samples").hidden=!db||![...kpis,...visions,...projects].some(x=>x.example)}
+  function updateSampleBtn(){$("#clear-samples").hidden=!db||![...kpis,...visions,...projects,...imps,...tasks].some(x=>x.example)}
 
   /* ---------- 書き込み ---------- */
   function requireDb(errEl){
@@ -732,6 +861,8 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     b.disabled=true;
     try{
       for(const k of kpis.filter(k=>k.example))await db.doc("kpis/"+k.id).delete();
+      for(const i of imps.filter(i=>i.example))await db.doc("improvements/"+i.id).delete();
+      for(const t of tasks.filter(t=>t.example))await db.doc("agentTasks/"+t.id).delete();
       for(const p of projects.filter(p=>p.example))await db.doc("projects/"+p.id).delete();
       for(const v of visions.filter(v=>v.example))await db.doc("vision/"+v.id).delete();
       setStatus("サンプルを削除しました");
@@ -758,6 +889,7 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     const docs=s=>s.docs.map(d=>Object.assign({id:d.id},d.data()));
     db.collection("kpis").onSnapshot(s=>{kpis=docs(s);loaded.kpis=true;renderAll()},onErr);
     db.collection("projects").onSnapshot(s=>{projects=docs(s);loaded.projects=true;renderAll()},onErr);
+    db.collection("improvements").onSnapshot(s=>{imps=docs(s);renderLadder();renderProjects()},onErr);
     db.collection("agentTasks").onSnapshot(s=>{tasks=docs(s);renderProjects();resolveNames()},onErr);
     db.collection("vision").onSnapshot(s=>{visions=docs(s);loaded.vision=true;renderAll()},onErr);
     db.doc("board/creed").onSnapshot(s=>{creed=s.exists?s.data():{};renderCreed()},onErr);

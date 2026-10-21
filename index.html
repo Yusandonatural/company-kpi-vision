@@ -189,6 +189,15 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
 .consult .acts li{margin-bottom:4px}
 .consult .acts button{margin-left:6px}
 
+.me{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 14px 4px 4px;max-width:100%;min-width:0}
+.me .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;flex:none;background:var(--ai)}
+.me .who2{display:grid;line-height:1.3;min-width:0}
+.me .nm{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me .em{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.me .role{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--ai-soft);color:var(--ai);white-space:nowrap}
+.me.out .av{background:var(--line);color:var(--muted)}
+.me-warn{font-size:12px;color:var(--warn);max-width:28ch;text-align:right}
+
 .tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:4px;z-index:20}
 
 @media (max-width:760px){.horizons,.ladder{grid-template-columns:minmax(0,1fr)}.rung+.rung{border-left:0;border-top:1px solid var(--line)}.creed{grid-template-columns:minmax(0,1fr)}.creed-side{align-items:start}}
@@ -202,6 +211,8 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
       <h1 id="mission-text">ミッション（私たちは何のために存在するか）を書き込んでください</h1>
     </div>
     <div class="creed-side">
+      <div class="me out" id="me" aria-live="polite"><span class="av" id="me-av">?</span><span class="who2"><span class="nm" id="me-name">確認中…</span><span class="em" id="me-email"></span></span><span class="role" id="me-role" hidden></span></div>
+      <span class="me-warn" id="me-warn" hidden></span>
       <button class="btn" id="edit-creed" type="button">ミッション・ビジョンを編集</button>
       <button class="btn" type="button" id="clear-samples" hidden>サンプルをすべて削除</button>
       <span class="status" id="status">読み込み中…</span>
@@ -718,6 +729,25 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
     }
     renderProjects();
   }
+  const ORG_DOMAIN="yusando.com";
+  async function renderMe(){
+    const box=$("#me"),warn=$("#me-warn");
+    if(!user){box.classList.add("out");$("#me-av").textContent="?";$("#me-name").textContent="サインインしていません";$("#me-email").textContent="claude.ai に Google でサインインすると保存できます";$("#me-role").hidden=true;return}
+    try{
+      const m=await user.me();
+      if(!m||!m.id){box.classList.add("out");$("#me-name").textContent="サインインしていません";$("#me-email").textContent="claude.ai に Google でサインインすると保存できます";return}
+      box.classList.remove("out");
+      const name=m.name||m.email||"ログイン中";
+      $("#me-av").textContent=(name.trim()[0]||"?").toUpperCase();
+      if(m.color)$("#me-av").style.background=m.color;
+      $("#me-name").textContent=name;
+      $("#me-email").textContent=m.email||"";
+      const r=$("#me-role");r.hidden=false;r.textContent=m.isOwner?"オーナー":m.canEdit?"編集できます":(await user.can("data.write").catch(()=>null))===false?"閲覧のみ":"入力できます";
+      const dom=(m.email||"").split("@")[1]||"";
+      warn.hidden=!(m.email&&dom.toLowerCase()!==ORG_DOMAIN);
+      warn.textContent=`社外のアカウント（@${dom}）でログインしています。@${ORG_DOMAIN} のアカウントに切り替えてください。`;
+    }catch(_){}
+  }
   async function resolveNames(){
     if(!user||!user.profiles)return;
     const ids=[...new Set(tasks.map(t=>t.createdBy).filter(id=>id&&!(id in names)))];
@@ -878,12 +908,12 @@ dialog::backdrop{background:rgba(10,14,22,.45)}
   /* ---------- 接続 ---------- */
   (async()=>{
     const done=msg=>{setStatus(msg);loaded.kpis=loaded.vision=loaded.projects=true;renderAll()};
-    if(!window.claude||!window.claude.use)return done("保存先に接続できません");
+    if(!window.claude||!window.claude.use){renderMe();return done("保存先に接続できません")}
     db=await window.claude.use("db");
-    if(!db)return done("サインインすると保存・共有できます");
+    if(!db){renderMe();return done("サインインすると保存・共有できます")}
     window.claude.use("assets").then(a=>{assets=a}).catch(()=>{});
     window.claude.use("sample").then(s=>{sample=s;renderProjects()}).catch(()=>{});
-    window.claude.use("user").then(u=>{user=u;resolveNames()}).catch(()=>{});
+    window.claude.use("user").then(u=>{user=u;renderMe();resolveNames()}).catch(()=>{});
     setStatus("");
     const onErr=x=>setStatus(errMsg(x).replace("保存","読み込み"));
     const docs=s=>s.docs.map(d=>Object.assign({id:d.id},d.data()));

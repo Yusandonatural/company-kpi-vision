@@ -19,6 +19,7 @@ import { TermPage } from './pages/TermPage';
 import { TermReviewPage } from './pages/TermReviewPage';
 import { TermsPage } from './pages/TermsPage';
 import { WeekPage } from './pages/WeekPage';
+import { L } from './i18n';
 
 /** /term?date=… → その日を含むタームへ */
 function CurrentTerm() {
@@ -34,8 +35,8 @@ function CurrentTerm() {
 function NotFound() {
   return (
     <div className="page narrow">
-      <h1 className="page-title">ページが見つかりません</h1>
-      <p><a href={homePath()}>最初の画面へ</a></p>
+      <h1 className="page-title">{L('ページが見つかりません', 'Page not found')}</h1>
+      <p><a href={homePath()}>{L('最初の画面へ', 'Go to start')}</a></p>
     </div>
   );
 }

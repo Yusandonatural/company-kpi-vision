@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { MONTHS_EN } from '../../shared/dates';
+import { L } from '../i18n';
 
 const HUES = [12, 32, 150, 200, 225, 265, 310, 345];
 
@@ -42,10 +44,10 @@ export function RingProgress({ pct, size = 66, tone = 'ok', stroke = 3.5, childr
 export function timeAgo(iso: string) {
   const t = Date.parse(iso.endsWith('Z') || iso.includes('+') ? iso : iso.replace(' ', 'T') + 'Z');
   const s = Math.max(0, (Date.now() - t) / 1000);
-  if (s < 60) return 'たった今';
-  if (s < 3600) return `${Math.floor(s / 60)}分前`;
-  if (s < 86400) return `${Math.floor(s / 3600)}時間前`;
-  if (s < 86400 * 7) return `${Math.floor(s / 86400)}日前`;
+  if (s < 60) return L('たった今', 'just now');
+  if (s < 3600) return L(`${Math.floor(s / 60)}分前`, `${Math.floor(s / 60)}m ago`);
+  if (s < 86400) return L(`${Math.floor(s / 3600)}時間前`, `${Math.floor(s / 3600)}h ago`);
+  if (s < 86400 * 7) return L(`${Math.floor(s / 86400)}日前`, `${Math.floor(s / 86400)}d ago`);
   const d = new Date(t);
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+  return L(`${d.getMonth() + 1}月${d.getDate()}日`, `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`);
 }

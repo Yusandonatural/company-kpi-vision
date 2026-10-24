@@ -1,3 +1,5 @@
+import { L } from './i18n';
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -16,10 +18,10 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   });
   if (res.status === 401) {
     location.href = '/login';
-    throw new ApiError(401, 'ログインしてください');
+    throw new ApiError(401, L('ログインしてください', 'Please sign in'));
   }
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, (json as any).error ?? `エラー (${res.status})`);
+  if (!res.ok) throw new ApiError(res.status, (json as any).error ?? L(`エラー (${res.status})`, `Error (${res.status})`));
   return json as T;
 }
 

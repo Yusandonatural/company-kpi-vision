@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, post } from '../api';
 import { Loading, Modal } from './ui';
+import { L } from '../i18n';
 
 interface Candidate {
   pageId: string;
@@ -40,9 +41,9 @@ export function NotionPicker({ date, onClose, onPicked }: { date: string; onClos
   }
 
   return (
-    <Modal title="Notion の Todo リストから選ぶ" onClose={onClose} wide>
-      <p className="muted small">Inbox・今週の対応事項・今月対応予定・未着手 の行から選べます。選んだ行には今日の日付とタグ「目標達成ジャーナル」が付きます。</p>
-      <input className="search" placeholder="キーワード・タグ・場所で絞り込み" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+    <Modal title={L('Notion の Todo リストから選ぶ', 'Pick from Notion to-do list')} onClose={onClose} wide>
+      <p className="muted small">{L('Inbox・今週の対応事項・今月対応予定・未着手 の行から選べます。選んだ行には今日の日付とタグ「目標達成ジャーナル」が付きます。', 'Choose from rows in Inbox, this week, this month or not started. Picked rows get today\'s date and the tag 「目標達成ジャーナル」.')}</p>
+      <input className="search" placeholder={L('キーワード・タグ・場所で絞り込み', 'Filter by keyword, tag or place')} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
       {error && <p className="form-error">{error}</p>}
       {!items && !error && <Loading />}
       <ul className="picker-list">
@@ -57,11 +58,11 @@ export function NotionPicker({ date, onClose, onPicked }: { date: string; onClos
                   <span key={t} className="chip chip-soft">{t}</span>
                 ))}
               </span>
-              {busy === c.pageId && <span className="muted small">追加中…</span>}
+              {busy === c.pageId && <span className="muted small">{L('追加中…', 'Adding…')}</span>}
             </button>
           </li>
         ))}
-        {items && shown.length === 0 && <li className="muted">該当する行がありません</li>}
+        {items && shown.length === 0 && <li className="muted">{L('該当する行がありません', 'No matching rows')}</li>}
       </ul>
     </Modal>
   );

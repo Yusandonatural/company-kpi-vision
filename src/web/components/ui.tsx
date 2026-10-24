@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { SaveState } from '../hooks';
 import type { TaskStats } from '../../shared/progress';
+import { L } from '../i18n';
 
 export function Progress({ value, tone }: { value: number; tone?: 'warn' | 'gold' }) {
   return (
@@ -12,19 +13,19 @@ export function Progress({ value, tone }: { value: number; tone?: 'warn' | 'gold
 }
 
 export function SaveBadge({ state }: { state: SaveState }) {
-  const label = { idle: '', saving: '保存中…', saved: '保存しました', error: '保存できませんでした' }[state];
+  const label = { idle: '', saving: L('保存中…', 'Saving…'), saved: L('保存しました', 'Saved'), error: L('保存できませんでした', 'Couldn\'t save') }[state];
   return <span className={`save-badge ${state}`} aria-live="polite">{label}</span>;
 }
 
 export function Loading() {
-  return <div className="loading">読み込み中…</div>;
+  return <div className="loading">{L('読み込み中…', 'Loading…')}</div>;
 }
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="error-box">
       <p>{message}</p>
-      {onRetry && <button className="btn" onClick={onRetry}>もう一度</button>}
+      {onRetry && <button className="btn" onClick={onRetry}>{L('もう一度', 'Retry')}</button>}
     </div>
   );
 }
@@ -40,7 +41,7 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
       <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
           <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="閉じる">×</button>
+          <button className="icon-btn" onClick={onClose} aria-label={L('閉じる', 'Close')}>×</button>
         </div>
         <div className="modal-body">{children}</div>
       </div>
@@ -74,14 +75,14 @@ export function pct(v: number | null | undefined) {
 export function TaskStatsLine({ s }: { s: TaskStats }) {
   return (
     <span className="muted">
-      できた {s.done} ／ できなかった {s.missed + s.carried} ／ 未着手 {s.todo}
+      {L('できた', 'Done')} {s.done} ／ {L('できなかった', 'Missed')} {s.missed + s.carried} ／ {L('未着手', 'Not started')} {s.todo}
     </span>
   );
 }
 
 export function SubTabs({ items }: { items: { to: string; label: string; active: boolean }[] }) {
   return (
-    <nav className="subtabs" aria-label="表示の切り替え">
+    <nav className="subtabs" aria-label={L('表示の切り替え', 'Switch view')}>
       {items.map((i) => (
         <Link key={i.to} to={i.to} className={i.active ? 'active' : ''} aria-current={i.active ? 'page' : undefined}>
           {i.label}
@@ -93,7 +94,7 @@ export function SubTabs({ items }: { items: { to: string; label: string; active:
 
 export function Stars({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
   return (
-    <div className="stars" role="radiogroup" aria-label="自己評価">
+    <div className="stars" role="radiogroup" aria-label={L('自己評価', 'Self-rating')}>
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}

@@ -5,9 +5,14 @@ import { useApi } from '../hooks';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
 import { Composer } from '../social/Composer';
+import { getUiMode } from '../uiMode';
+
+export function Layout() {
+  return getUiMode() === 'classic' ? <ClassicLayout /> : <SnsLayout />;
+}
 
 /** Instagram / Facebook のような形: 画面が広いときは左のメニュー、スマホは下のタブ */
-export function Layout() {
+function SnsLayout() {
   const { pathname } = useLocation();
   const nav = useNavigate();
   const me = useApi<any>('/me');
@@ -116,6 +121,73 @@ export function Layout() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** ジャーナルの形（今までの使い方）: 上のタブで 今日・週間・月間・3ヶ月・ビジョン、スマホは下のタブ。タイムラインもタブの1つ */
+function ClassicLayout() {
+  const { pathname } = useLocation();
+  const m = pathname.match(/^\/(day|week|month)\/(\d{4}-\d{2}-\d{2})/);
+  const anchor = m ? m[2] : todayJST();
+  const TABS = [
+    { to: '/today', match: '/day', label: '今日', icon: '日' },
+    { to: `/week/${mondayOf(anchor)}`, match: '/week', label: '週間', icon: '週' },
+    { to: `/month/${monthStart(anchor)}`, match: '/month', label: '月間', icon: '月' },
+    { to: `/term?date=${anchor}`, match: '/term', label: '3ヶ月', icon: '期' },
+    { to: '/life', match: '/life', label: 'ビジョン', icon: '志', wide: true },
+    { to: '/home', match: '/home', label: 'タイムライン', icon: '皆' },
+  ];
+  const bar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty('--topbar-h', `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const active = (x: string) => pathname.startsWith(x) || (x === '/term' && pathname.startsWith('/terms')) || (x === '/home' && pathname.startsWith('/people'));
+  return (
+    <div className="app classic">
+      <header className="topbar" ref={bar}>
+        <NavLink to="/today" className="brand">
+          <img className="brand-mark" src="/icon.svg" alt="" width="28" height="28" />
+          <span className="brand-text">
+            <span className="brand-name">悠三堂 KPI</span>
+            <span className="brand-sub">90日の挑戦</span>
+          </span>
+        </NavLink>
+        <nav className="tabs" aria-label="メイン">
+          {TABS.map((t) => (
+            <NavLink key={t.match} to={t.to} className={active(t.match) ? 'active' : ''}>
+              {t.label}
+            </NavLink>
+          ))}
+        </nav>
+        <NavLink to="/org" className={`settings-link ${pathname.startsWith('/org') ? 'active' : ''}`}>
+          メンバー
+        </NavLink>
+        <NavLink to="/settings" className={`settings-link ${pathname.startsWith('/settings') ? 'active' : ''}`}>
+          設定
+        </NavLink>
+      </header>
+      <main className="main">
+        <Outlet />
+      </main>
+      <nav className="bottombar" aria-label="メイン">
+        {TABS.filter((t) => !t.wide).map((t) => (
+          <NavLink key={t.match} to={t.to} className={active(t.match) ? 'active' : ''}>
+            <span className="bb-icon" aria-hidden="true">{t.icon}</span>
+            <span>{t.label === 'タイムライン' ? 'みんな' : t.label}</span>
+          </NavLink>
+        ))}
+        <NavLink to="/settings" className={pathname.startsWith('/settings') ? 'active' : ''}>
+          <span className="bb-icon" aria-hidden="true">⚙</span>
+          <span>設定</span>
+        </NavLink>
+      </nav>
     </div>
   );
 }

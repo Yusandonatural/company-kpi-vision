@@ -126,4 +126,27 @@ ok(prof.person.department_name === 'EC' && prof.goals.some((x) => x.id === g2.id
 const page1 = await boss('GET', '/api/feed?limit=2');
 const page2 = await boss('GET', `/api/feed?limit=2&before=${encodeURIComponent(page1.next)}`);
 ok(page1.posts.length === 2 && page2.posts.length >= 1 && !page2.posts.some((p) => page1.posts.some((q) => q.id === p.id)), 'タイムラインの続きを読める');
+// ミッション → ビジョン → 90日 → プロジェクト＋改善
+await boss('PUT', '/api/life', { mission: '自然の恵みを、まっすぐ人に届ける', vision: '自然茶を世界20か国の食卓へ' });
+await staff('PUT', '/api/life', { mission: '勝手に変える' }, 403);
+const life = await staff('GET', '/api/life');
+ok(life.mission === '自然の恵みを、まっすぐ人に届ける' && life.vision === '自然茶を世界20か国の食卓へ', 'ミッションとビジョンは代表が決め、全員が見る');
+ok((await staff('GET', '/api/stories')).mission === '自然の恵みを、まっすぐ人に届ける', 'ストーリーズにミッション');
+const kz = await staff('POST', `/api/goals/${g.id}/improvements`, { issue: '2回目で解約が多い', action: '同梱物にお茶の淹れ方カード' });
+ok(kz.due_date === term.end_date && kz.owner_user_id === sme.user.id && kz.status === 'idea', '改善は誰でも出せ、期限はタームの最終日、担当は自分');
+const late = term.end_date.slice(0, 4) + '-12-31' > term.end_date ? `${Number(term.end_date.slice(0, 4)) + 1}-01-15` : '2099-01-01';
+let lateErr = ''; try { await staff('POST', `/api/goals/${g.id}/improvements`, { action: '先の話', due_date: late }); } catch (e) { lateErr = e.message; }
+ok(lateErr.includes('90日'), 'タームの外の期限は出せない');
+await staff('PATCH', `/api/improvements/${kz.id}`, { status: 'doing' });
+await staff('PATCH', `/api/improvements/${kz.id}`, { status: 'done', result: '解約率 18% → 11%' });
+const list = await boss('GET', `/api/terms/${term.id}/improvements`);
+ok(list.length === 1 && list[0].status === 'done' && list[0].result === '解約率 18% → 11%' && list[0].goal_title === g.title, '改善の一覧（タームごと）');
+// 流さない設定は担当(staff)で止めているので、代表で完了させて確かめる
+const kz2 = await boss('POST', `/api/goals/${g.id}/improvements`, { action: 'LPの写真を撮り直す' });
+await boss('PATCH', `/api/improvements/${kz2.id}`, { status: 'done' });
+ok((await staff('GET', '/api/feed')).posts.some((p) => p.kind === 'improvement' && p.ref_id === kz2.id), '改善を完了するとタイムラインに出る');
+const mem = client();
+await mem('GET', '/auth/dev?email=member3@yusando.com');
+await mem('DELETE', `/api/improvements/${kz2.id}`, null, 403);
+ok(true, 'ほかの人が出した改善は担当には消せない');
 console.log('ALL OK');

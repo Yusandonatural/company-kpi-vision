@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 import { mondayOf, monthStart, todayJST } from '../shared/dates';
 import { api } from './api';
+import { homePath } from './uiMode';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
 import { DayPage } from './pages/DayPage';
@@ -34,7 +35,7 @@ function NotFound() {
   return (
     <div className="page narrow">
       <h1 className="page-title">ページが見つかりません</h1>
-      <p><a href="/home">ホームへ</a></p>
+      <p><a href={homePath()}>最初の画面へ</a></p>
     </div>
   );
 }
@@ -43,7 +44,7 @@ export function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/home" replace />} />
+        <Route index element={<Navigate to={homePath()} replace />} />
         <Route path="home" element={<FeedPage />} />
         <Route path="people/:id" element={<ProfilePage />} />
         <Route path="org" element={<OrgPage />} />

@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import './styles.css';
 import './social.css';
+import { applyUiMode } from './uiMode';
+
+applyUiMode();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

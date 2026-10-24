@@ -16,21 +16,41 @@ export function LifePage() {
 
 function LifeView({ data, reload, owner }: { data: any; reload: () => void; owner: boolean }) {
   const [vision, setVision] = useState<string>(data.vision);
-  const save = useAutosave((v: { vision: string }) => put('/life', v), 800, '/api/life', 'fj.draft.life');
+  const [mission, setMission] = useState<string>(data.mission ?? '');
+  const save = useAutosave((v: { vision?: string; mission?: string }) => put('/life', v), 800, '/api/life', 'fj.draft.life');
   const active = data.goals.filter((g: any) => !g.achieved_at);
   const achieved = data.goals.filter((g: any) => g.achieved_at);
 
   return (
     <div className="page narrow-wide life-page">
       <header className="life-hero">
-        <p className="life-eyebrow">ビジョン・10年の目標・年間の10倍KPI</p>
+        <p className="life-eyebrow">ミッション → ビジョン → 90日のプロジェクト＋改善</p>
         <h1 className="page-title">悠三堂はどこへ向かうか</h1>
-        <p className="muted">四半期の目標も、今日のやるべきことも、ここに書いたビジョンに近づくための一歩です。{owner ? '' : '書き換えられるのは代表だけです。'}</p>
+        <p className="muted">ミッション（なぜ存在するか）から、ビジョン（どこへ行くか）を決め、90日ごとのプロジェクトと改善でやりきります。{owner ? '' : '書き換えられるのは代表だけです。'}</p>
       </header>
+
+      <section className="card vision-card mission-card">
+        <div className="card-head">
+          <h2 className="card-title"><span className="step-no">1</span>ミッション</h2>
+          <SaveBadge state={save.state} />
+        </div>
+        <textarea
+          className="vision-input"
+          rows={2}
+          value={mission}
+          readOnly={!owner}
+          aria-label="ミッション"
+          placeholder="例: 自然の恵みを、まっすぐ人に届ける。"
+          onChange={(e) => {
+            setMission(e.target.value);
+            save.schedule({ mission: e.target.value });
+          }}
+        />
+      </section>
 
       <section className="card vision-card">
         <div className="card-head">
-          <h2 className="card-title">会社のビジョン</h2>
+          <h2 className="card-title"><span className="step-no">2</span>ビジョン</h2>
           <SaveBadge state={save.state} />
         </div>
         <textarea

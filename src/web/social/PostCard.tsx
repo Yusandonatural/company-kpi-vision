@@ -9,6 +9,7 @@ const KIND: Record<string, { label: string; icon: string; tone: string }> = {
   milestone: { label: 'マイルストーン達成', icon: 'flag', tone: 'gold' },
   kpi: { label: 'KPIを更新', icon: 'chart', tone: 'blue' },
   review: { label: 'ふりかえり', icon: 'book', tone: 'violet' },
+  improvement: { label: '改善を完了', icon: 'check', tone: 'kaizen' },
 };
 
 const ROLE: Record<string, string> = { owner: '代表', lead: '部署長', member: '' };

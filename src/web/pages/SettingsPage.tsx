@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, post, put } from '../api';
 import { ErrorBox, Loading } from '../components/ui';
 import { useApi } from '../hooks';
+import { getUiMode, setUiMode, type UiMode } from '../uiMode';
 
 export function SettingsPage() {
   const demo = !!(window as any).__FJ_DEMO;
@@ -61,6 +62,8 @@ export function SettingsPage() {
   return (
     <div className="page narrow-wide">
       <h1 className="page-title">設定</h1>
+
+      <UiModeCard />
 
       <section className="card">
         <h2 className="card-title">アカウント</h2>
@@ -171,5 +174,37 @@ export function SettingsPage() {
         )}
       </section>
     </div>
+  );
+}
+
+/** 画面の形（この端末だけ）。どちらでも、タイムライン・ジャーナルの機能はすべて使える */
+function UiModeCard() {
+  const [mode, setMode] = useState<UiMode>(getUiMode());
+  const choose = (m: UiMode) => {
+    setMode(m);
+    setUiMode(m);
+    // ナビゲーションを入れ替えるため、最初の画面から開き直す
+    location.href = m === 'classic' ? '/today' : '/home';
+  };
+  const OPTIONS: { v: UiMode; title: string; desc: string }[] = [
+    { v: 'sns', title: 'タイムラインの形', desc: 'ホームにチームの「できた」とストーリーズ。左のメニュー／スマホは下のアイコン（Instagram・Facebook 風）' },
+    { v: 'classic', title: 'ジャーナルの形（今までの使い方）', desc: '「今日」のページから始まり、上のタブで 今日・週間・月間・3ヶ月・ビジョン。タイムラインもタブから開けます' },
+  ];
+  return (
+    <section className="card">
+      <h2 className="card-title">画面の形</h2>
+      <p className="muted small">この端末だけの設定です。どちらを選んでも、記録や目標は同じものが出ます。</p>
+      <div className="ui-mode">
+        {OPTIONS.map((o) => (
+          <label key={o.v} className={`ui-mode-opt ${mode === o.v ? 'on' : ''}`}>
+            <input type="radio" name="ui-mode" checked={mode === o.v} onChange={() => choose(o.v)} />
+            <span>
+              <b>{o.title}</b>
+              <small>{o.desc}</small>
+            </span>
+          </label>
+        ))}
+      </div>
+    </section>
   );
 }

@@ -9,9 +9,9 @@ const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0
 
 export async function lifeSummary(db: D1Database, userId: string) {
   await run(db, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', userId);
-  const s = await one(db, 'SELECT life_vision FROM user_settings WHERE user_id = ?', userId);
+  const s = await one(db, 'SELECT life_vision, mission FROM user_settings WHERE user_id = ?', userId);
   const goals = await all(db, 'SELECT * FROM life_goals WHERE user_id = ? ORDER BY achieved_at IS NOT NULL, sort_order, created_at', userId);
-  return { vision: s?.life_vision ?? '', goals };
+  return { mission: s?.mission ?? '', vision: s?.life_vision ?? '', goals };
 }
 
 async function ownLifeGoal(db: D1Database, userId: string, id: string) {
@@ -28,6 +28,7 @@ lifeRoutes.put('/life', async (c) => {
   const b = await c.req.json();
   await run(c.env.DB, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', u.id);
   if ('vision' in b) await run(c.env.DB, 'UPDATE user_settings SET life_vision = ? WHERE user_id = ?', str(b.vision, 1000), u.id);
+  if ('mission' in b) await run(c.env.DB, 'UPDATE user_settings SET mission = ? WHERE user_id = ?', str(b.mission, 1000), u.id);
   return c.json({ ok: true, savedAt: new Date().toISOString() });
 });
 

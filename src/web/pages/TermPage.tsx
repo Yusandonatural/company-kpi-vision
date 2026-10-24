@@ -4,12 +4,17 @@ import { habitLabel, habitScheduled } from '../../shared/progress';
 import { TermHeader } from '../components/TermHeader';
 import { ErrorBox, Loading, Progress, Stat, metricText, pct } from '../components/ui';
 import { useApi } from '../hooks';
+import { FlowStrip, KaizenList } from '../social/Kaizen';
 
 export function TermPage() {
   const { id = '' } = useParams();
   const { data: term, error, reload } = useApi<any>(`/terms/${id}`);
+  const life = useApi<any>('/life');
+  const kaizen = useApi<any[]>(`/terms/${id}/improvements`);
+  const org = useApi<any>('/org');
   if (error) return <ErrorBox message={error} onRetry={reload} />;
   if (!term) return <Loading />;
+  const imps = kaizen.data ?? [];
   const info = term.info;
   const projects = term.goals.filter((g: any) => g.type === 'project');
   const habits = term.goals.filter((g: any) => g.type === 'habit');
@@ -19,6 +24,8 @@ export function TermPage() {
   return (
     <div className="page">
       <TermHeader term={term} tab="progress" />
+
+      <FlowStrip life={life.data} term={term} projects={term.goals.filter((g: any) => g.type === 'project')} imps={imps} />
 
       <section className="card">
         <div className="row">
@@ -51,7 +58,7 @@ export function TermPage() {
 
       <section className="card">
         <div className="card-head">
-          <h2 className="card-title">プロジェクト目標</h2>
+          <h2 className="card-title">この90日のプロジェクト＋改善</h2>
           <Link className="btn btn-small btn-ghost" to={`/term/${term.id}/goals`}>編集</Link>
         </div>
         {projects.length === 0 && <p className="muted">まだありません。<Link to={`/term/${term.id}/goals`}>目標を立てる</Link></p>}
@@ -78,6 +85,7 @@ export function TermPage() {
                   {g.obstacle_plan && <> → <strong>対策:</strong> {g.obstacle_plan}</>}
                 </p>
               )}
+              <KaizenList goal={g} term={term} items={imps.filter((i: any) => i.goal_id === g.id)} members={org.data?.members ?? []} onChange={kaizen.reload} />
             </li>
           ))}
         </ul>

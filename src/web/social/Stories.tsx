@@ -6,12 +6,13 @@ import { Icon } from '../components/Icon';
 const SIGNAL: Record<string, string> = { ok: '順調', warn: '注意', bad: '遅れ', none: '未入力' };
 const fmt = (n: number | null | undefined) => (n == null ? '—' : Number(n).toLocaleString('ja-JP', { maximumFractionDigits: 1 }));
 
-type Story = { key: string; kind: 'vision' | 'kpi' | 'person'; data: any };
+type Story = { key: string; kind: 'mission' | 'vision' | 'kpi' | 'person'; data: any };
 
 /** 上のストーリーズ（会社のビジョン → 年間10倍KPI → メンバーの今日） */
 export function Stories({ s }: { s: any }) {
   const [open, setOpen] = useState<number | null>(null);
   const items: Story[] = [
+    ...(s.mission ? [{ key: 'mission', kind: 'mission' as const, data: s }] : []),
     ...(s.vision ? [{ key: 'vision', kind: 'vision' as const, data: s }] : []),
     ...s.kpis.map((k: any) => ({ key: k.id, kind: 'kpi' as const, data: k })),
     ...s.people.map((p: any) => ({ key: p.id, kind: 'person' as const, data: p })),
@@ -21,6 +22,9 @@ export function Stories({ s }: { s: any }) {
       <div className="stories" role="list" aria-label="ストーリーズ">
         {items.map((it, i) => (
           <button key={it.key} role="listitem" className="story" onClick={() => setOpen(i)}>
+            {it.kind === 'mission' && (
+              <span className="story-ring vision"><span className="story-badge"><Icon name="flag" size={26} /></span></span>
+            )}
             {it.kind === 'vision' && (
               <span className="story-ring vision"><span className="story-badge"><Icon name="vision" size={26} /></span></span>
             )}
@@ -35,7 +39,7 @@ export function Stories({ s }: { s: any }) {
               </RingProgress>
             )}
             <span className="story-label">
-              {it.kind === 'vision' ? 'ビジョン' : it.kind === 'kpi' ? it.data.title : it.data.me ? 'あなた' : it.data.name || it.data.email}
+              {it.kind === 'mission' ? 'ミッション' : it.kind === 'vision' ? 'ビジョン' : it.kind === 'kpi' ? it.data.title : it.data.me ? 'あなた' : it.data.name || it.data.email}
             </span>
           </button>
         ))}
@@ -76,6 +80,12 @@ function StoryViewer({ items, start, s, onClose }: { items: Story[]; start: numb
         <div className="sv-tap left" onClick={prev} aria-hidden="true" />
         <div className="sv-tap right" onClick={next} aria-hidden="true" />
         <div className="sv-content">
+          {it.kind === 'mission' && (
+            <>
+              <span className="sv-kicker">悠三堂のミッション</span>
+              <p className="sv-vision">{s.mission}</p>
+            </>
+          )}
           {it.kind === 'vision' && (
             <>
               <span className="sv-kicker">悠三堂のビジョン</span>

@@ -1,4 +1,29 @@
-# 目標達成ジャーナル｜90日の挑戦
+# 悠三堂 KPIボード
+
+会社のビジョンから今日の行動までを1本の階段でつなぐ、会社版の目標管理アプリです。
+個人用の「目標達成ジャーナル｜90日の挑戦」（[Yusandonatural/finisherjournalonline](https://github.com/Yusandonatural/finisherjournalonline)）を土台にしています。
+引き継ぎ書と進み具合は [docs/HANDOFF.md](docs/HANDOFF.md)。以前の claude.ai 版は [artifact/](artifact/)。
+
+## 会社版で変えたところ
+
+| | ジャーナル | 会社版 |
+|---|---|---|
+| ログイン | `ALLOWED_EMAILS` の人だけ | `ALLOWED_DOMAINS`（yusando.com）の全員と `ALLOWED_EMAILS` の人。`OWNER_EMAILS` の人は最初から「代表」 |
+| 役割 | なし | 代表（owner）／部署長（lead）／担当（member）。部署と役割は代表が決める（`/api/org`） |
+| 共有するもの | — | ターム・目標・マイルストーン・行動指標のルール・ビジョンと長期目標は会社の持ち物（`users.id = 'company'`）。変えられるのは代表と部署長（ビジョンは代表だけ） |
+| 人ごとのもの | すべて | 今日のタスク・日報・週と月の予定とレビュー・行動指標の記録 |
+| 目標 | 1人の目標 | 「誰のものか」（会社／部署／個人）と「どの上の段につながるか」（`parent_goal_id`・`annual_kpi_id`） |
+| 年間の10倍KPI | タームの一文 | `annual_kpis`（1年に3つまで。信号つき）。推移は `kpi_values` |
+| 語学アプリ連動 | あり | 使わない（定期処理から外した） |
+
+テスト: `npx vitest run`（計算）、`node tests/e2e/api-smoke.mjs`（ジャーナルの機能）、`node tests/e2e/company.mjs`（複数人・役割・KPI）。
+e2e は空のローカルDBに対して `npm run dev` のあとで実行します。
+
+---
+
+以下はジャーナルの README（構成と公開の手順は会社版も同じ。名前は `yusando-kpi-board` に読み替え）。
+
+## 目標達成ジャーナル｜90日の挑戦（元の README）
 
 紙の「フィニッシャージャーナル」（90日ジャーナル）をもとにした Web アプリです。
 3ヶ月（1ターム）の目標を立て、1日1ページのジャーナルで「やるべきこと3つ」を積み上げ、

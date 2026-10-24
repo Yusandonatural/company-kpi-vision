@@ -1,8 +1,11 @@
 import { daysInRange, todayJST } from '../shared/dates';
 import { habitScheduled, habitStats, isBehind, projectProgress, taskStats, termInfo } from '../shared/progress';
 import { all, one } from './db';
+import { ORG } from './env';
 
-export async function termForDate(db: D1Database, userId: string, date: string) {
+/** 会社のタームから、その日のターム（なければ次、なければ最後）を返す */
+export async function termForDate(db: D1Database, _userId: string, date: string) {
+  const userId = ORG;
   return (
     (await one(db, 'SELECT * FROM terms WHERE user_id = ? AND start_date <= ? AND end_date >= ?', userId, date, date)) ??
     (await one(db, 'SELECT * FROM terms WHERE user_id = ? AND start_date > ? ORDER BY start_date LIMIT 1', userId, date)) ??

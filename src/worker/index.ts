@@ -7,7 +7,8 @@ import { integrationRoutes } from './routes/integrations';
 import { lifeRoutes } from './routes/life';
 import { lockinRoutes } from './routes/lockin';
 import { termRoutes } from './routes/terms';
-import { syncLangLinks } from './langlink';
+import { kpiRoutes } from './routes/kpi';
+import { orgRoutes } from './org';
 import { markMissed } from './tasks';
 
 const app = new Hono<AppEnv>();
@@ -25,6 +26,8 @@ app.route('/api', dayRoutes);
 app.route('/api', integrationRoutes);
 app.route('/api', lifeRoutes);
 app.route('/api', lockinRoutes);
+app.route('/api', orgRoutes);
+app.route('/api', kpiRoutes);
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
 
 export default {
@@ -34,7 +37,6 @@ export default {
       (async () => {
         await markMissed(env);
         await syncAll(env).catch((e) => console.error('notion sync', e));
-        await syncLangLinks(env).catch((e) => console.error('lang sync', e));
       })(),
     );
   },

@@ -3,7 +3,8 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { defaultTermFor, todayJST } from '../shared/dates';
 import { encrypt, randomToken } from './crypto';
 import { one, run, uid } from './db';
-import { HttpError, type AppEnv, type Env, type User } from './env';
+import { HttpError, ORG, type AppEnv, type Env, type User } from './env';
+import { allowedEmail, ensureMember, memberOf } from './org';
 
 const SESSION_COOKIE = 'fj_session';
 const STATE_COOKIE = 'fj_oauth_state';
@@ -25,34 +26,33 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
 ];
 
-function allowed(env: Env, email: string): boolean {
-  return env.ALLOWED_EMAILS.split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
-}
+const allowed = allowedEmail;
 
 function isLocal(url: string): boolean {
   const h = new URL(url).hostname;
   return h === 'localhost' || h === '127.0.0.1';
 }
 
-/** 初回ログイン時: 設定と最初のタームを用意する */
+/** 初回ログイン時: 設定・メンバー登録と、会社の最初のタームを用意する */
 async function ensureUser(env: Env, email: string, name: string | null, picture: string | null): Promise<User> {
   let user = await one<User>(env.DB, 'SELECT * FROM users WHERE email = ?', email);
   if (!user) {
     user = { id: uid(), email, name, picture_url: picture };
     await run(env.DB, 'INSERT INTO users (id, email, name, picture_url) VALUES (?, ?, ?, ?)', user.id, email, name, picture);
     await run(env.DB, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', user.id);
-    const t = defaultTermFor(todayJST());
-    await run(
-      env.DB,
-      'INSERT INTO terms (id, user_id, title, start_date, end_date) VALUES (?, ?, ?, ?, ?)',
-      uid(), user.id, t.title, t.start, t.end,
-    );
+    const hasTerm = await one(env.DB, 'SELECT id FROM terms WHERE user_id = ? LIMIT 1', ORG);
+    if (!hasTerm) {
+      const t = defaultTermFor(todayJST());
+      await run(
+        env.DB,
+        'INSERT INTO terms (id, user_id, title, start_date, end_date) VALUES (?, ?, ?, ?, ?)',
+        uid(), ORG, t.title, t.start, t.end,
+      );
+    }
   } else {
     await run(env.DB, 'UPDATE users SET name = ?, picture_url = ? WHERE id = ?', name, picture, user.id);
   }
+  await ensureMember(env, user.id, email);
   return user;
 }
 
@@ -136,7 +136,8 @@ authRoutes.get('/auth/callback', async (c) => {
 // ローカル開発専用: Google を通さずにログインする
 authRoutes.get('/auth/dev', async (c) => {
   if (c.env.DEV_LOGIN !== 'true' || !isLocal(c.req.url)) return c.notFound();
-  const email = c.env.ALLOWED_EMAILS.split(',')[0].trim();
+  const email = (c.req.query('email') || `${c.env.OWNER_EMAILS},${c.env.ALLOWED_EMAILS}`.split(',').map((s: string) => s.trim()).filter(Boolean)[0] || '').trim();
+  if (!email || !allowed(c.env, email)) return c.text('許可されていないアカウントです', 403);
   const user = await ensureUser(c.env, email, '開発ユーザー', null);
   await startSession(c, user.id);
   return c.redirect('/');
@@ -165,7 +166,9 @@ export const requireUser: MiddlewareHandler<AppEnv> = async (c, next) => {
       )
     : null;
   if (!user) throw new HttpError(401, 'ログインしてください');
+  if (user.id === ORG) throw new HttpError(401, 'ログインしてください');
   c.set('user', user);
+  c.set('member', await memberOf(c.env.DB, user.id));
   await rememberOrigin(c.env, new URL(c.req.url).origin);
   await next();
 };

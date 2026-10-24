@@ -25,6 +25,7 @@ integrationRoutes.get('/me', async (c) => {
   const g = await one(c.env.DB, 'SELECT refresh_token_enc, scope FROM google_tokens WHERE user_id = ?', u.id);
   return c.json({
     user: u,
+    member: c.get('member'),
     settings: await settings(c.env.DB, u.id),
     googleConnected: !!g?.refresh_token_enc,
     notionEnabled: notion.notionEnabled(c.env),
@@ -52,8 +53,7 @@ integrationRoutes.get('/langs/status', async (c) => {
   const linked = await all(
     c.env.DB,
     `SELECT g.id, g.title, g.type, g.link_source FROM goals g JOIN terms t ON t.id = g.term_id
-     WHERE t.user_id = ? AND g.link_source IS NOT NULL ORDER BY t.start_date DESC, g.sort_order`,
-    u.id,
+     WHERE t.user_id = 'company' AND g.link_source IS NOT NULL ORDER BY t.start_date DESC, g.sort_order`,
   );
   return c.json({
     enabled: firebaseEnabled(c.env),

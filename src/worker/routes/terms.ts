@@ -2,25 +2,27 @@ import { Hono } from 'hono';
 import { isDate, termTitle, todayJST } from '../../shared/dates';
 import { taskStats } from '../../shared/progress';
 import { all, one, ownGoal, ownTask, ownTerm, patch, run, uid } from '../db';
-import { HttpError, type AppEnv } from '../env';
+import { HttpError, ORG, type AppEnv } from '../env';
+import { requireManager } from '../org';
 import { byWeekday, fillRate, goalsWithProgress, groupByGoal, tasksInRange, termForDate, withInfo } from '../stats';
 import { markMissed } from '../tasks';
 import { LANG_SOURCES } from '../../shared/langs';
+import { KPI_SOURCES } from '../../shared/kpi';
 import { syncLangLinks } from '../langlink';
 
 export const termRoutes = new Hono<AppEnv>();
 
 const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
-async function neighbors(db: D1Database, userId: string, term: any) {
-  const nextTerm = await one(db, 'SELECT * FROM terms WHERE user_id = ? AND start_date > ? ORDER BY start_date LIMIT 1', userId, term.end_date);
-  const prevTerm = await one(db, 'SELECT * FROM terms WHERE user_id = ? AND end_date < ? ORDER BY end_date DESC LIMIT 1', userId, term.start_date);
+async function neighbors(db: D1Database, _userId: string, term: any) {
+  const nextTerm = await one(db, 'SELECT * FROM terms WHERE user_id = ? AND start_date > ? ORDER BY start_date LIMIT 1', ORG, term.end_date);
+  const prevTerm = await one(db, 'SELECT * FROM terms WHERE user_id = ? AND end_date < ? ORDER BY end_date DESC LIMIT 1', ORG, term.start_date);
   return { ...withInfo(term), nextTerm, prevTerm };
 }
 
 termRoutes.get('/terms', async (c) => {
   const u = c.get('user');
-  const terms = await all(c.env.DB, 'SELECT * FROM terms WHERE user_id = ? ORDER BY start_date DESC', u.id);
+  const terms = await all(c.env.DB, 'SELECT * FROM terms WHERE user_id = ? ORDER BY start_date DESC', ORG);
   const out = [];
   for (const t of terms) {
     const tasks = await tasksInRange(c.env.DB, u.id, t.start_date, t.end_date);
@@ -36,20 +38,21 @@ termRoutes.get('/terms/current', async (c) => {
 });
 
 termRoutes.post('/terms', async (c) => {
+  requireManager(c);
   const u = c.get('user');
   const b = await c.req.json();
   if (!isDate(b.start_date) || !isDate(b.end_date) || b.start_date > b.end_date) throw new HttpError(400, '日付が正しくありません');
   const overlap = await one(
     c.env.DB,
     'SELECT title FROM terms WHERE user_id = ? AND start_date <= ? AND end_date >= ?',
-    u.id, b.end_date, b.start_date,
+    ORG, b.end_date, b.start_date,
   );
   if (overlap) throw new HttpError(400, `「${overlap.title}」と期間が重なっています`);
   const id = uid();
   await run(
     c.env.DB,
     'INSERT INTO terms (id, user_id, title, start_date, end_date) VALUES (?, ?, ?, ?, ?)',
-    id, u.id, str(b.title, 100) || termTitle(b.start_date, b.end_date), b.start_date, b.end_date,
+    id, ORG, str(b.title, 100) || termTitle(b.start_date, b.end_date), b.start_date, b.end_date,
   );
   // 前タームの目標を引き継ぐ（プロジェクトは未完了のマイルストーンだけ）
   let order = 0;
@@ -59,10 +62,12 @@ termRoutes.post('/terms', async (c) => {
     await run(
       c.env.DB,
       `INSERT INTO goals (id, term_id, type, title, why, sort_order, manual_progress, habit_frequency, habit_times_per_week, habit_weekdays_json,
-         metric_unit, metric_start, metric_current, metric_target, obstacle, obstacle_plan, link_source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         metric_unit, metric_start, metric_current, metric_target, obstacle, obstacle_plan, link_source,
+         owner_type, department_id, owner_user_id, annual_kpi_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       nid, id, g.type, g.title, g.why, order++, g.manual_progress, g.habit_frequency, g.habit_times_per_week, g.habit_weekdays_json,
       g.metric_unit, g.metric_current ?? g.metric_start, g.metric_current ?? g.metric_start, g.metric_target, g.obstacle, g.obstacle_plan, g.link_source ?? null,
+      g.owner_type ?? 'company', g.department_id ?? null, g.owner_user_id ?? null, g.annual_kpi_id ?? null,
     );
     const ms = await all(c.env.DB, 'SELECT * FROM milestones WHERE goal_id = ? AND done = 0 ORDER BY sort_order', g.id);
     for (const [i, m] of ms.entries()) {
@@ -86,6 +91,7 @@ termRoutes.get('/terms/:id', async (c) => {
 });
 
 termRoutes.patch('/terms/:id', async (c) => {
+  requireManager(c);
   const u = c.get('user');
   const term = await ownTerm(c.env.DB, u.id, c.req.param('id'));
   const b = await c.req.json();
@@ -97,6 +103,7 @@ termRoutes.patch('/terms/:id', async (c) => {
 });
 
 termRoutes.delete('/terms/:id', async (c) => {
+  requireManager(c, ['owner']);
   const term = await ownTerm(c.env.DB, c.get('user').id, c.req.param('id'));
   await run(c.env.DB, 'DELETE FROM terms WHERE id = ?', term.id);
   return c.json({ ok: true });
@@ -120,13 +127,19 @@ function goalFields(b: any) {
   // 語学アプリとの連動：空なら解除、知らない値は無視
   if ('link_source' in b) {
     if (b.link_source == null || b.link_source === '') f.link_source = null;
-    else if (typeof b.link_source === 'string' && LANG_SOURCES[b.link_source]) f.link_source = b.link_source;
+    else if (typeof b.link_source === 'string' && (LANG_SOURCES[b.link_source] || KPI_SOURCES[b.link_source])) f.link_source = b.link_source;
+  }
+  // 会社版: 誰の目標か、どの上の段（年間10倍KPI・上位の目標）につながるか
+  if ('owner_type' in b && ['company', 'department', 'personal'].includes(b.owner_type)) f.owner_type = b.owner_type;
+  for (const k of ['department_id', 'owner_user_id', 'parent_goal_id', 'annual_kpi_id']) {
+    if (k in b) f[k] = typeof b[k] === 'string' && b[k] ? b[k] : null;
   }
   if ('habit_weekdays' in b && Array.isArray(b.habit_weekdays)) f.habit_weekdays_json = JSON.stringify(b.habit_weekdays.filter((n: any) => Number.isInteger(n) && n >= 0 && n <= 6));
   return f;
 }
 
 termRoutes.post('/terms/:id/goals', async (c) => {
+  requireManager(c);
   const term = await ownTerm(c.env.DB, c.get('user').id, c.req.param('id'));
   const b = await c.req.json();
   if (!['project', 'habit'].includes(b.type)) throw new HttpError(400, '種類が正しくありません');
@@ -141,6 +154,7 @@ termRoutes.post('/terms/:id/goals', async (c) => {
 });
 
 termRoutes.patch('/goals/:id', async (c) => {
+  requireManager(c);
   const u = c.get('user');
   const g = await ownGoal(c.env.DB, u.id, c.req.param('id'));
   const f = goalFields(await c.req.json());
@@ -152,12 +166,14 @@ termRoutes.patch('/goals/:id', async (c) => {
 });
 
 termRoutes.delete('/goals/:id', async (c) => {
+  requireManager(c);
   const g = await ownGoal(c.env.DB, c.get('user').id, c.req.param('id'));
   await run(c.env.DB, 'DELETE FROM goals WHERE id = ?', g.id);
   return c.json({ ok: true });
 });
 
 termRoutes.post('/goals/:id/move', async (c) => {
+  requireManager(c);
   const g = await ownGoal(c.env.DB, c.get('user').id, c.req.param('id'));
   const { dir } = await c.req.json();
   const list = await all(c.env.DB, 'SELECT id FROM goals WHERE term_id = ? AND type = ? ORDER BY sort_order, created_at', g.term_id, g.type);
@@ -169,6 +185,7 @@ termRoutes.post('/goals/:id/move', async (c) => {
 });
 
 termRoutes.post('/goals/:id/milestones', async (c) => {
+  requireManager(c);
   const g = await ownGoal(c.env.DB, c.get('user').id, c.req.param('id'));
   const title = str((await c.req.json()).title, 200);
   if (!title) throw new HttpError(400, 'マイルストーンを入れてください');
@@ -178,8 +195,8 @@ termRoutes.post('/goals/:id/milestones', async (c) => {
   return c.json(await one(c.env.DB, 'SELECT * FROM milestones WHERE id = ?', id));
 });
 
-async function ownMilestone(db: D1Database, userId: string, id: string) {
-  const m = await one(db, 'SELECT m.* FROM milestones m JOIN goals g ON g.id = m.goal_id JOIN terms t ON t.id = g.term_id WHERE m.id = ? AND t.user_id = ?', id, userId);
+async function ownMilestone(db: D1Database, _userId: string, id: string) {
+  const m = await one(db, 'SELECT m.* FROM milestones m JOIN goals g ON g.id = m.goal_id JOIN terms t ON t.id = g.term_id WHERE m.id = ? AND t.user_id = ?', id, ORG);
   if (!m) throw new HttpError(404, 'マイルストーンが見つかりません');
   return m;
 }
@@ -198,6 +215,7 @@ termRoutes.patch('/milestones/:id', async (c) => {
 });
 
 termRoutes.delete('/milestones/:id', async (c) => {
+  requireManager(c);
   const m = await ownMilestone(c.env.DB, c.get('user').id, c.req.param('id'));
   await run(c.env.DB, 'DELETE FROM milestones WHERE id = ?', m.id);
   return c.json({ ok: true });
@@ -266,7 +284,7 @@ termRoutes.post('/terms/:id/carry-over', async (c) => {
 termRoutes.get('/terms/:id/carried-in', async (c) => {
   const u = c.get('user');
   const term = await ownTerm(c.env.DB, u.id, c.req.param('id'));
-  const prev = await one(c.env.DB, 'SELECT * FROM terms WHERE user_id = ? AND end_date < ? ORDER BY end_date DESC LIMIT 1', u.id, term.start_date);
+  const prev = await one(c.env.DB, 'SELECT * FROM terms WHERE user_id = ? AND end_date < ? ORDER BY end_date DESC LIMIT 1', ORG, term.start_date);
   if (!prev) return c.json([]);
   return c.json(
     await all(
@@ -279,6 +297,7 @@ termRoutes.get('/terms/:id/carried-in', async (c) => {
 });
 
 termRoutes.post('/tasks/:id/to-milestone', async (c) => {
+  requireManager(c);
   const u = c.get('user');
   const t = await ownTask(c.env.DB, u.id, c.req.param('id'));
   const g = await ownGoal(c.env.DB, u.id, (await c.req.json()).goal_id);

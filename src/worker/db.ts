@@ -1,4 +1,4 @@
-import { HttpError } from './env';
+import { HttpError, ORG } from './env';
 
 export function uid(): string {
   return crypto.randomUUID().replace(/-/g, '');
@@ -33,18 +33,19 @@ export async function patch(
   await run(db, sql, ...keys.map((k) => fields[k] ?? null), id);
 }
 
-export async function ownTerm(db: D1Database, userId: string, termId: string) {
-  const t = await one(db, 'SELECT * FROM terms WHERE id = ? AND user_id = ?', termId, userId);
+/** ターム・目標は会社の共有データ。userId は呼び出し側の互換のために受け取るだけ */
+export async function ownTerm(db: D1Database, _userId: string, termId: string) {
+  const t = await one(db, 'SELECT * FROM terms WHERE id = ? AND user_id = ?', termId, ORG);
   if (!t) throw new HttpError(404, 'タームが見つかりません');
   return t;
 }
 
-export async function ownGoal(db: D1Database, userId: string, goalId: string) {
+export async function ownGoal(db: D1Database, _userId: string, goalId: string) {
   const g = await one(
     db,
     'SELECT g.* FROM goals g JOIN terms t ON t.id = g.term_id WHERE g.id = ? AND t.user_id = ?',
     goalId,
-    userId,
+    ORG,
   );
   if (!g) throw new HttpError(404, '目標が見つかりません');
   return g;

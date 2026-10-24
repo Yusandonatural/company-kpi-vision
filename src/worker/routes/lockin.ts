@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { addDays, daysInRange, diffDays, isDate, mondayOf, todayJST } from '../../shared/dates';
 import { COMMON_RULES, MAX_CUSTOM_RULES, MAX_RULES, SETUP_ITEMS, parseEvent, parseSetup, readiness, ruleDone, streak } from '../../shared/lockin';
 import { all, one, ownTerm, run, uid } from '../db';
-import { HttpError, type AppEnv } from '../env';
+import { HttpError, ORG, type AppEnv } from '../env';
+import { requireManager } from '../org';
 import { goalsWithProgress, tasksInRange, withInfo } from '../stats';
 
 export const lockinRoutes = new Hono<AppEnv>();
@@ -10,8 +11,8 @@ export const lockinRoutes = new Hono<AppEnv>();
 const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const num = (v: unknown, min: number, max: number) => Math.max(min, Math.min(max, Number(v) || 0));
 
-async function ownRule(db: D1Database, userId: string, id: string) {
-  const r = await one(db, 'SELECT r.*, t.user_id FROM lockin_rules r JOIN terms t ON t.id = r.term_id WHERE r.id = ? AND t.user_id = ?', id, userId);
+async function ownRule(db: D1Database, _userId: string, id: string) {
+  const r = await one(db, 'SELECT r.* FROM lockin_rules r JOIN terms t ON t.id = r.term_id WHERE r.id = ? AND t.user_id = ?', id, ORG);
   if (!r) throw new HttpError(404, 'ルールが見つかりません');
   return r;
 }
@@ -30,17 +31,17 @@ async function ensureCommonRules(db: D1Database, termId: string) {
 }
 
 /** 1日分の記録を書く。分のルールは足し算も受ける */
-export async function writeRuleLog(db: D1Database, rule: any, date: string, b: { value?: unknown; add?: unknown; done?: unknown }) {
-  const cur = await one(db, 'SELECT * FROM lockin_logs WHERE rule_id = ? AND date = ?', rule.id, date);
+export async function writeRuleLog(db: D1Database, userId: string, rule: any, date: string, b: { value?: unknown; add?: unknown; done?: unknown }) {
+  const cur = await one(db, 'SELECT * FROM lockin_logs WHERE rule_id = ? AND user_id = ? AND date = ?', rule.id, userId, date);
   let value = Number(cur?.value ?? 0);
   if ('value' in b) value = num(b.value, 0, 1440);
   if ('add' in b) value = num(value + Number(b.add), 0, 1440);
   const done = rule.unit === 'min' ? value >= rule.target_value : 'done' in b ? !!b.done : !!cur?.done;
   await run(
     db,
-    `INSERT INTO lockin_logs (rule_id, date, value, done) VALUES (?, ?, ?, ?)
-     ON CONFLICT (rule_id, date) DO UPDATE SET value = excluded.value, done = excluded.done`,
-    rule.id, date, value, done ? 1 : 0,
+    `INSERT INTO lockin_logs (rule_id, user_id, date, value, done) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (rule_id, user_id, date) DO UPDATE SET value = excluded.value, done = excluded.done`,
+    rule.id, userId, date, value, done ? 1 : 0,
   );
   return { value, done };
 }
@@ -50,7 +51,7 @@ export async function lockinForDay(db: D1Database, userId: string, term: any, da
   if (!term?.lockin) return null;
   const rules = await rulesOf(db, term.id);
   const logs = new Map(
-    (await all(db, 'SELECT l.* FROM lockin_logs l JOIN lockin_rules r ON r.id = l.rule_id WHERE r.term_id = ? AND l.date = ?', term.id, date)).map((l) => [l.rule_id, l]),
+    (await all(db, 'SELECT l.* FROM lockin_logs l JOIN lockin_rules r ON r.id = l.rule_id WHERE r.term_id = ? AND l.user_id = ? AND l.date = ?', term.id, userId, date)).map((l) => [l.rule_id, l]),
   );
   const projects = await one(db, 'SELECT COUNT(*) AS n FROM goals WHERE term_id = ? AND type = \'project\'', term.id);
   const r = readiness(term, projects?.n ?? 0, rules.filter((x) => x.category === 'custom').length);
@@ -85,7 +86,7 @@ lockinRoutes.get('/terms/:id/lockin', async (c) => {
   // ルールごとの守れた日
   const until = today < term.end_date ? today : term.end_date;
   const elapsed = today < term.start_date ? [] : daysInRange(term.start_date, until);
-  const logs = await all(c.env.DB, 'SELECT l.* FROM lockin_logs l JOIN lockin_rules r ON r.id = l.rule_id WHERE r.term_id = ?', term.id);
+  const logs = await all(c.env.DB, 'SELECT l.* FROM lockin_logs l JOIN lockin_rules r ON r.id = l.rule_id WHERE r.term_id = ? AND l.user_id = ?', term.id, u.id);
   const ruleStats = rules.map((x) => {
     const dates = new Set(logs.filter((l) => l.rule_id === x.id && ruleDone(x, Number(l.value), !!l.done)).map((l) => l.date as string));
     const todayLog = logs.find((l) => l.rule_id === x.id && l.date === asOf);
@@ -138,6 +139,7 @@ lockinRoutes.get('/terms/:id/lockin', async (c) => {
 });
 
 lockinRoutes.put('/terms/:id/lockin', async (c) => {
+  requireManager(c);
   const u = c.get('user');
   const term = await ownTerm(c.env.DB, u.id, c.req.param('id'));
   const b = await c.req.json();
@@ -158,6 +160,7 @@ lockinRoutes.put('/terms/:id/lockin', async (c) => {
 
 // ---- ルール ----
 lockinRoutes.post('/terms/:id/lockin/rules', async (c) => {
+  requireManager(c);
   const term = await ownTerm(c.env.DB, c.get('user').id, c.req.param('id'));
   const b = await c.req.json();
   const title = str(b.title, 100);
@@ -176,6 +179,7 @@ lockinRoutes.post('/terms/:id/lockin/rules', async (c) => {
 });
 
 lockinRoutes.patch('/lockin/rules/:id', async (c) => {
+  requireManager(c);
   const r = await ownRule(c.env.DB, c.get('user').id, c.req.param('id'));
   const b = await c.req.json();
   // 共通ルールは名前を変えられない（数値の目安だけ）
@@ -188,6 +192,7 @@ lockinRoutes.patch('/lockin/rules/:id', async (c) => {
 });
 
 lockinRoutes.delete('/lockin/rules/:id', async (c) => {
+  requireManager(c);
   const r = await ownRule(c.env.DB, c.get('user').id, c.req.param('id'));
   if (r.category === 'common') throw new HttpError(400, '共通のルールは外せません');
   await run(c.env.DB, 'DELETE FROM lockin_rules WHERE id = ?', r.id);
@@ -198,5 +203,5 @@ lockinRoutes.put('/days/:date/lockin/:ruleId', async (c) => {
   const date = c.req.param('date');
   if (!isDate(date)) throw new HttpError(400, '日付が正しくありません');
   const r = await ownRule(c.env.DB, c.get('user').id, c.req.param('ruleId'));
-  return c.json(await writeRuleLog(c.env.DB, r, date, await c.req.json()));
+  return c.json(await writeRuleLog(c.env.DB, c.get('user').id, r, date, await c.req.json()));
 });

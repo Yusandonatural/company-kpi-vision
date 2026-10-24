@@ -1,5 +1,5 @@
 {
-  "name": "finisher-journal-online",
+  "name": "yusando-kpi-board",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,8 +10,8 @@
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "db:migrate:local": "wrangler d1 migrations apply finisher-journal --local",
-    "db:migrate:remote": "wrangler d1 migrations apply finisher-journal --remote",
+    "db:migrate:local": "wrangler d1 migrations apply yusando-kpi-board --local",
+    "db:migrate:remote": "wrangler d1 migrations apply yusando-kpi-board --remote",
     "deploy": "npm run build && wrangler deploy",
     "build:demo": "vite build -c vite.demo.config.ts && node scripts/build-demo.mjs"
   },

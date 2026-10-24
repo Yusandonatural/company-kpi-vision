@@ -91,9 +91,9 @@ await req('PATCH', `/api/goals/${g1.id}`, { obstacle: '物件が見つからな�
 detail = await req('GET', `/api/terms/${term.id}`);
 ok(detail.goals.find(g => g.id === g1.id).obstacle_plan === '不動産屋3社に同時に頼む', 'obstacle and plan saved');
 // C. 時間があればやること
-const m1 = await req('POST', `/api/days/2026-10-05/tasks`, { title: '本を読む', kind: 'might' });
-await req('POST', `/api/days/2026-10-05/tasks`, { title: '散歩', kind: 'might' });
-day = await req('GET', `/api/days/2026-10-05`);
+const m1 = await req('POST', `/api/days/2026-12-20/tasks`, { title: '本を読む', kind: 'might' });
+await req('POST', `/api/days/2026-12-20/tasks`, { title: '散歩', kind: 'might' });
+day = await req('GET', `/api/days/2026-12-20`);
 ok(day.might.length === 2 && day.tasks.length === 0, 'might-do items are listed separately from the 3 tasks');
 const ledgerBefore = (await req('GET', `/api/terms/${term.id}/tasks`)).stats.total;
 const pastMight = await req('POST', `/api/days/2026-09-10/tasks`, { title: '過去のもしできたら', kind: 'might' });
@@ -101,10 +101,10 @@ day = await req('GET', `/api/days/2026-09-10`);
 ok(day.might[0].status === 'todo', 'past might-do items are not auto-marked missed');
 ok((await req('GET', `/api/terms/${term.id}/tasks`)).stats.total === ledgerBefore, 'might-do items are not counted in the ledger');
 await req('POST', `/api/tasks/${m1.id}/promote`);
-day = await req('GET', `/api/days/2026-10-05`);
+day = await req('GET', `/api/days/2026-12-20`);
 ok(day.tasks.length === 1 && day.tasks[0].title === '本を読む' && day.might.length === 1, 'promote moves a might-do into the 3 tasks');
 await req('POST', `/api/tasks/${m1.id}/demote`);
-day = await req('GET', `/api/days/2026-10-05`);
+day = await req('GET', `/api/days/2026-12-20`);
 ok(day.tasks.length === 0 && day.might.length === 2, 'demote moves it back');
 // 人生の目標
 await req('PUT', '/api/life', { vision: '自然と共に生き、自然茶を世界に届ける' });

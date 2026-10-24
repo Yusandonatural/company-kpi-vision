@@ -123,8 +123,8 @@ async function pushTask(env: Env, task: any) {
   const goal = task.goal_id ? await one(env.DB, 'SELECT title FROM goals WHERE id = ?', task.goal_id) : null;
   const term = await one(
     env.DB,
-    'SELECT start_date FROM terms WHERE user_id = ? AND start_date <= ? AND end_date >= ?',
-    task.user_id, task.date, task.date,
+    "SELECT start_date FROM terms WHERE user_id = 'company' AND start_date <= ? AND end_date >= ?",
+    task.date, task.date,
   );
   const day = term ? Math.round((Date.parse(task.date) - Date.parse(term.start_date)) / 86400000) + 1 : null;
   const content = [day ? `Day ${day}` : null, goal ? `目標: ${goal.title}` : null, task.carry_count ? `送った回数: ${task.carry_count}` : null]

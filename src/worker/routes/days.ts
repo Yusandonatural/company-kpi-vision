@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { addDays, addMonths, daysInRange, isDate, mondayOf, monthEnd, monthStart, todayJST, weekday } from '../../shared/dates';
 import { habitScheduled, taskStats } from '../../shared/progress';
 import { all, one, ownGoal, ownTask, run } from '../db';
-import { HttpError, type AppEnv } from '../env';
+import { HttpError, ORG, type AppEnv } from '../env';
 import { archivePage, notionEnabled, pickFromNotion, pushDirty } from '../notion';
 import { fillRate, goalsWithProgress, groupByGoal, tasksInRange, termForDate, withInfo } from '../stats';
 import { createTask, markMissed, nextMightPosition, nextPosition } from '../tasks';
@@ -50,7 +50,7 @@ dayRoutes.get('/days/:date', async (c) => {
     },
     tasks,
     might: await tasksInRange(c.env.DB, u.id, date, date, 'might'),
-    life: await lifeSummary(c.env.DB, u.id),
+    life: await lifeSummary(c.env.DB, ORG),
     goals: term ? await goalsWithProgress(c.env.DB, term, date) : [],
     termStats: taskStats(termTasks),
     notionEnabled: notionEnabled(c.env),
@@ -82,7 +82,7 @@ dayRoutes.on(['PUT', 'POST'], '/days/:date', async (c) => {
     if ('noAlcohol' in b.event) {
       const term = await termForDate(c.env.DB, u.id, date);
       const rule = term?.lockin ? await one(c.env.DB, "SELECT * FROM lockin_rules WHERE term_id = ? AND rule_key = 'alcohol'", term.id) : null;
-      if (rule) await writeRuleLog(c.env.DB, rule, date, { done: !!b.event.noAlcohol });
+      if (rule) await writeRuleLog(c.env.DB, u.id, rule, date, { done: !!b.event.noAlcohol });
     }
   }
   const keys = Object.keys(f);
@@ -254,7 +254,7 @@ dayRoutes.get('/periods/:kind/:start', async (c) => {
 
   const tasks = await tasksInRange(c.env.DB, u.id, start, end);
   const entries = await all(c.env.DB, 'SELECT * FROM daily_entries WHERE user_id = ? AND date BETWEEN ? AND ?', u.id, start, end);
-  const terms = await all(c.env.DB, 'SELECT * FROM terms WHERE user_id = ? AND start_date <= ? AND end_date >= ? ORDER BY start_date', u.id, end, start);
+  const terms = await all(c.env.DB, 'SELECT * FROM terms WHERE user_id = ? AND start_date <= ? AND end_date >= ? ORDER BY start_date', ORG, end, start);
 
   // 期間内の習慣の達成数（予定日数に対して）
   const habits = [];

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { all, one, run, uid } from '../db';
-import { HttpError, type AppEnv } from '../env';
+import { HttpError, ORG, type AppEnv } from '../env';
+import { requireManager } from '../org';
 
 export const lifeRoutes = new Hono<AppEnv>();
 
@@ -19,10 +20,11 @@ async function ownLifeGoal(db: D1Database, userId: string, id: string) {
   return g;
 }
 
-lifeRoutes.get('/life', async (c) => c.json(await lifeSummary(c.env.DB, c.get('user').id)));
+lifeRoutes.get('/life', async (c) => c.json(await lifeSummary(c.env.DB, ORG)));
 
 lifeRoutes.put('/life', async (c) => {
-  const u = c.get('user');
+  requireManager(c, ['owner']);
+  const u = { id: ORG };
   const b = await c.req.json();
   await run(c.env.DB, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', u.id);
   if ('vision' in b) await run(c.env.DB, 'UPDATE user_settings SET life_vision = ? WHERE user_id = ?', str(b.vision, 1000), u.id);
@@ -30,7 +32,8 @@ lifeRoutes.put('/life', async (c) => {
 });
 
 lifeRoutes.post('/life/goals', async (c) => {
-  const u = c.get('user');
+  requireManager(c, ['owner']);
+  const u = { id: ORG };
   const b = await c.req.json();
   const title = str(b.title, 200);
   if (!title) throw new HttpError(400, '目標を入れてください');
@@ -41,7 +44,8 @@ lifeRoutes.post('/life/goals', async (c) => {
 });
 
 lifeRoutes.patch('/life/goals/:id', async (c) => {
-  const g = await ownLifeGoal(c.env.DB, c.get('user').id, c.req.param('id'));
+  requireManager(c, ['owner']);
+  const g = await ownLifeGoal(c.env.DB, ORG, c.req.param('id'));
   const b = await c.req.json();
   const f: Record<string, unknown> = {};
   if ('title' in b) f.title = str(b.title, 200) || g.title;
@@ -55,13 +59,15 @@ lifeRoutes.patch('/life/goals/:id', async (c) => {
 });
 
 lifeRoutes.delete('/life/goals/:id', async (c) => {
-  const g = await ownLifeGoal(c.env.DB, c.get('user').id, c.req.param('id'));
+  requireManager(c, ['owner']);
+  const g = await ownLifeGoal(c.env.DB, ORG, c.req.param('id'));
   await run(c.env.DB, 'DELETE FROM life_goals WHERE id = ?', g.id);
   return c.json({ ok: true });
 });
 
 lifeRoutes.post('/life/goals/:id/move', async (c) => {
-  const u = c.get('user');
+  requireManager(c, ['owner']);
+  const u = { id: ORG };
   const g = await ownLifeGoal(c.env.DB, u.id, c.req.param('id'));
   const { dir } = await c.req.json();
   const list = await all(c.env.DB, 'SELECT id FROM life_goals WHERE user_id = ? AND achieved_at IS NULL ORDER BY sort_order, created_at', u.id);

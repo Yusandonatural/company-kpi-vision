@@ -3,7 +3,12 @@ export interface Env {
   ASSETS: Fetcher;
   APP_TIMEZONE: string;
   APP_URL: string;
+  /** 個別に許可するアカウント（カンマ区切り） */
   ALLOWED_EMAILS: string;
+  /** このドメインのアカウントは全員ログインできる（カンマ区切り。例: yusando.com） */
+  ALLOWED_DOMAINS: string;
+  /** 最初のログインで「代表」になるアカウント（カンマ区切り） */
+  OWNER_EMAILS: string;
   NOTION_TASKS_DB_ID: string;
   NOTION_JOURNAL_TAG: string;
   NOTION_ASSIGNEE: string;
@@ -30,7 +35,16 @@ export interface User {
   picture_url: string | null;
 }
 
-export type AppEnv = { Bindings: Env; Variables: { user: User } };
+/** 会社の共有データ（ターム・目標・行動指標・ビジョン）の持ち主 */
+export const ORG = 'company';
+
+export type Role = 'owner' | 'lead' | 'member';
+export interface Member {
+  role: Role;
+  department_id: string | null;
+}
+
+export type AppEnv = { Bindings: Env; Variables: { user: User; member: Member } };
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {

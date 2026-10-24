@@ -81,4 +81,49 @@ ok(bossDay.lockin.rules.find((r) => r.id === rule.id).done === false, 'ほかの
 // 今日のタスクは人ごと
 await staff('POST', '/api/days/2026-12-20/tasks', { title: '商品ページを直す', goal_id: g2.id });
 ok((await boss('GET', '/api/days/2026-12-20')).tasks.length === 0, 'タスクは本人だけに見える');
+// タイムライン（SNS風）
+const staffTask = (await staff('GET', '/api/days/2026-12-20')).tasks[0];
+await staff('PATCH', `/api/tasks/${staffTask.id}`, { status: 'done' });
+let feed = await boss('GET', '/api/feed');
+const auto = feed.posts.find((p) => p.kind === 'task_done' && p.ref_id === staffTask.id);
+ok(auto && auto.body === '商品ページを直す' && auto.goal_title === '定期便の会員を+300人', 'タスクをできたにするとタイムラインに出る');
+ok(feed.posts.some((p) => p.kind === 'kpi' && p.body.startsWith('年間売上')), 'KPIの値を入れるとタイムラインに出る');
+await staff('PATCH', `/api/tasks/${staffTask.id}`, { status: 'todo' });
+feed = await boss('GET', '/api/feed');
+ok(!feed.posts.some((p) => p.ref_id === staffTask.id), 'できたを取り消すと消える');
+await staff('PATCH', `/api/tasks/${staffTask.id}`, { status: 'done' });
+const autoId = (await boss('GET', '/api/feed')).posts.find((p) => p.ref_id === staffTask.id).id;
+await boss('PUT', `/api/posts/${autoId}/like`, { on: true });
+await staff('PATCH', `/api/tasks/${staffTask.id}`, { status: 'todo' });
+ok((await boss('GET', '/api/feed')).posts.some((p) => p.id === autoId), 'いいねが付いた投稿は取り消しても残る');
+
+const post = await staff('POST', '/api/posts', { body: 'LPを新しくしました', goal_id: g2.id });
+const liked = await boss('PUT', `/api/posts/${post.id}/like`, { on: true });
+ok(liked.like_count === 1, 'いいねできる');
+await boss('PUT', `/api/posts/${post.id}/like`, { on: true });
+ok((await boss('PUT', `/api/posts/${post.id}/like`, { on: true })).like_count === 1, '同じ人のいいねは1回');
+await boss('POST', `/api/posts/${post.id}/comments`, { body: 'いいですね' });
+const cs = await staff('GET', `/api/posts/${post.id}/comments`);
+ok(cs.length === 1 && cs[0].body === 'いいですね', 'コメントできる');
+feed = await staff('GET', '/api/feed');
+const fp = feed.posts.find((p) => p.id === post.id);
+ok(fp.like_count === 1 && fp.comment_count === 1 && fp.liked === false && fp.likers.length === 1 && fp.goal_title === '定期便の会員を+300人', 'タイムラインにいいね・コメントの数と目標が出る');
+const outsiderPost = await boss('POST', '/api/posts', { body: '代表の投稿' });
+await staff('DELETE', `/api/posts/${outsiderPost.id}`, null, 403);
+ok(true, 'ほかの人の投稿は消せない');
+await boss('DELETE', `/api/posts/${post.id}`);
+ok(!(await boss('GET', '/api/feed')).posts.some((p) => p.id === post.id), '代表は投稿を消せる');
+
+await staff('PUT', '/api/settings/share', { on: false });
+const quiet = await staff('POST', '/api/days/2026-12-21/tasks', { title: '静かなタスク' });
+await staff('PATCH', `/api/tasks/${quiet.id}`, { status: 'done' });
+ok(!(await boss('GET', '/api/feed')).posts.some((p) => p.ref_id === quiet.id), '流さない設定なら、できたは出ない');
+
+const st = await staff('GET', '/api/stories');
+ok(st.kpis.length === 3 && st.people[0].me === true && st.people.every((p) => p.id !== 'company'), 'ストーリーズは10倍KPIと、自分が先頭のメンバー');
+const prof = await boss('GET', `/api/people/${sme.user.id}`);
+ok(prof.person.department_name === 'EC' && prof.goals.some((x) => x.id === g2.id) && prof.stats.posts >= 1, 'プロフィールに部署・担当の目標・投稿数');
+const page1 = await boss('GET', '/api/feed?limit=2');
+const page2 = await boss('GET', `/api/feed?limit=2&before=${encodeURIComponent(page1.next)}`);
+ok(page1.posts.length === 2 && page2.posts.length >= 1 && !page2.posts.some((p) => page1.posts.some((q) => q.id === p.id)), 'タイムラインの続きを読める');
 console.log('ALL OK');

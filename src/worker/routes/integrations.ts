@@ -17,7 +17,7 @@ async function settings(db: D1Database, userId: string) {
   try {
     calendarIds = JSON.parse(s.calendar_ids_json);
   } catch {}
-  return { calendarIds, missedCutoff: s.missed_cutoff as string };
+  return { calendarIds, missedCutoff: s.missed_cutoff as string, shareDone: s.share_done !== 0 };
 }
 
 integrationRoutes.get('/me', async (c) => {

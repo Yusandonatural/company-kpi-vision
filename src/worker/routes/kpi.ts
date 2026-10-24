@@ -4,6 +4,7 @@ import { KPI_SOURCES, kpiSignal, yearElapsedPct } from '../../shared/kpi';
 import { all, one, ownGoal, run, uid } from '../db';
 import { HttpError, type AppEnv } from '../env';
 import { requireManager } from '../org';
+import { autoPost } from './social';
 
 export const kpiRoutes = new Hono<AppEnv>();
 
@@ -101,5 +102,9 @@ kpiRoutes.put('/kpis/:type/:id/values/:date', async (c) => {
   );
   const latest = await one(c.env.DB, 'SELECT MAX(date) AS d FROM kpi_values WHERE target_type = ? AND target_id = ?', type, id);
   if (latest?.d === date) await run(c.env.DB, `UPDATE ${type === 'annual' ? 'annual_kpis' : 'goals'} SET metric_current = ? WHERE id = ?`, value, t.id);
+  const shown = Number.isInteger(value) ? value.toLocaleString('ja-JP') : value.toLocaleString('ja-JP', { maximumFractionDigits: 2 });
+  const goalText = t.metric_target != null ? ` / 目標 ${Number(t.metric_target).toLocaleString('ja-JP')}${t.metric_unit ?? ''}` : '';
+  await run(c.env.DB, "DELETE FROM posts WHERE kind = 'kpi' AND ref_id = ?", `${type}:${id}:${date}`);
+  await autoPost(c.env.DB, c.get('user').id, 'kpi', `${type}:${id}:${date}`, `${t.title}：${shown}${t.metric_unit ?? ''}${goalText}`, type === 'goal' ? t.id : null);
   return c.json({ ok: true });
 });

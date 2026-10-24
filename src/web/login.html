@@ -4,22 +4,22 @@
     <meta charset="UTF-8" />
     <!-- ===== Google 標準セット（web-google-standard） ここから ===== -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>ログイン | 目標達成ジャーナル｜90日の挑戦</title>
-    <meta name="description" content="90日ごとに目標を立て、1日1ページのジャーナルで積み上げる。90日の挑戦をやりきるための、悠三堂の目標達成ジャーナルです。" />
+    <title>ログイン | 悠三堂 KPI</title>
+    <meta name="description" content="悠三堂の社内向け目標管理。ビジョンから今日の行動までを1本の階段でつなぎ、チームの「できた」を共有します。" />
     <meta name="robots" content="index,follow" />
     <link rel="canonical" href="https://journal.yusando.com/login" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="目標達成ジャーナル｜90日の挑戦" />
-    <meta property="og:title" content="目標達成ジャーナル｜90日の挑戦" />
-    <meta property="og:description" content="90日ごとに目標を立て、1日1ページのジャーナルで積み上げる。90日の挑戦をやりきるための目標達成ジャーナル。" />
+    <meta property="og:site_name" content="悠三堂 KPI" />
+    <meta property="og:title" content="悠三堂 KPI" />
+    <meta property="og:description" content="悠三堂の社内向け目標管理。ビジョンから今日の行動までを1本の階段でつなぎ、チームの「できた」を共有します。" />
     <meta property="og:url" content="https://journal.yusando.com/login" />
     <meta property="og:image" content="https://journal.yusando.com/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="ja_JP" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="目標達成ジャーナル｜90日の挑戦" />
-    <meta name="twitter:description" content="90日ごとに目標を立て、1日1ページのジャーナルで積み上げる。" />
+    <meta name="twitter:title" content="悠三堂 KPI" />
+    <meta name="twitter:description" content="悠三堂の社内向け目標管理。ビジョンから今日の行動までを1本の階段でつなぎ、チームの「できた」を共有します。" />
     <meta name="twitter:image" content="https://journal.yusando.com/og.png" />
     <script type="application/ld+json">
       {
@@ -36,7 +36,7 @@
           {
             "@type": "WebApplication",
             "@id": "https://journal.yusando.com/#app",
-            "name": "目標達成ジャーナル",
+            "name": "悠三堂 KPI",
             "url": "https://journal.yusando.com/login",
             "applicationCategory": "ProductivityApplication",
             "operatingSystem": "Web",
@@ -47,12 +47,12 @@
       }
     </script>
     <script>
-      window.GOOGLE_IDS = { site_url: 'https://journal.yusando.com', ga4_measurement_id: 'G-9JG1FFTL1B', ads_conversion_id: '', ads_conversion_labels: {} };
+      window.GOOGLE_IDS = { site_url: 'https://kpi.yusando.com', ga4_measurement_id: '', ads_conversion_id: '', ads_conversion_labels: {} };
       window.dataLayer = window.dataLayer || [];
       function gtag() { dataLayer.push(arguments); }
       gtag('consent', 'default', { ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted' });
       // 本番ドメイン以外では送信しない
-      window.__GTAG_ENABLED = location.hostname === new URL(GOOGLE_IDS.site_url).hostname;
+      window.__GTAG_ENABLED = !!GOOGLE_IDS.ga4_measurement_id && location.hostname === new URL(GOOGLE_IDS.site_url).hostname;
       if (window.__GTAG_ENABLED) {
         var s = document.createElement('script');
         s.async = true;
@@ -62,13 +62,13 @@
         gtag('config', GOOGLE_IDS.ga4_measurement_id, { send_page_view: true });
       }
       window.trackConversion = function (name, params) {
-        params = Object.assign({ site: 'finisher-journal' }, params || {});
+        params = Object.assign({ site: 'yusando-kpi' }, params || {});
         if (!window.__GTAG_ENABLED) return console.debug('[gtag disabled]', name, params);
         gtag('event', name, params);
       };
     </script>
     <!-- ===== Google 標準セット ここまで ===== -->
-    <meta name="theme-color" content="#f6f3ec" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -76,38 +76,37 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet" />
     <style>
-      :root { --bg: #f4efe4; --surface: #fffdf7; --ink: #25241f; --muted: #75705f; --line: #e6dfcf; --accent: #2f5d43; --accent-ink: #fff; --warn: #a94f36; --gold: #a9853a; }
-      @media (prefers-color-scheme: dark) { :root { --bg: #181a18; --surface: #212421; --ink: #ecebe4; --muted: #a3a097; --line: #353933; --accent: #8cc09b; --accent-ink: #13231a; --warn: #e79a82; --gold: #d6b46a; } }
+      :root { --bg: #f0f2f5; --surface: #fff; --ink: #0f1419; --muted: #65676b; --line: #e4e6eb; --accent: #1877f2; --warn: #e0245e; --ig: linear-gradient(45deg, #feda75, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5); color-scheme: light; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #18191a; --surface: #242526; --ink: #e4e6eb; --muted: #b0b3b8; --line: #3e4042; --accent: #2d88ff; --warn: #ff5c8a; color-scheme: dark; } }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink); font-family: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif; padding: 16px; }
-      main { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 40px 28px; text-align: center; }
-      .mark { width: 56px; height: 56px; margin: 0 auto 16px; }
-      h1 { font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif; font-weight: 700; font-size: 28px; margin: 0 0 8px; letter-spacing: .02em; }
-      .sub { color: var(--gold) !important; font-weight: 700; letter-spacing: .12em; margin: -4px 0 16px !important; }
-      p { color: var(--muted); line-height: 1.8; margin: 0 0 28px; font-size: 15px; }
-      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px 18px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); text-decoration: none; font-weight: 600; font-size: 16px; }
-      .btn:hover { filter: brightness(1.05); }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink); font-family: 'Zen Kaku Gothic New', -apple-system, 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif; padding: 16px; }
+      main { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 40px 32px 28px; text-align: center; box-shadow: 0 8px 28px rgba(0,0,0,.08); }
+      .mark { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 18px; }
+      h1 { font-weight: 700; font-size: 30px; margin: 0 0 6px; letter-spacing: .01em; }
+      h1 b { background: var(--ig); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      p { color: var(--muted); line-height: 1.8; margin: 0 0 26px; font-size: 15px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 13px 18px; border-radius: 10px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 700; font-size: 16px; }
+      .btn:hover { filter: brightness(1.06); }
       .btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
       .error { color: var(--warn); font-size: 14px; margin: 0 0 16px; min-height: 1em; }
       .dev[hidden] { display: none; }
       .dev { display: block; margin-top: 16px; color: var(--muted); font-size: 13px; }
-      footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+      footer { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
     </style>
   </head>
   <body>
     <main>
       <img class="mark" src="/icon.svg" alt="" width="56" height="56" />
-      <h1>目標達成ジャーナル</h1>
-      <p class="sub">90日の挑戦</p>
-      <p>90日の目標と、1日1ページの記録。<br />やりきるためのジャーナル。</p>
+      <h1>悠三堂 <b>KPI</b></h1>
+      <p>ビジョンから今日の行動まで。<br />チームの「できた」が集まる場所。</p>
       <p class="error" id="error" role="alert"></p>
-      <a class="btn" id="login" href="/auth/google">Googleでログイン</a>
+      <a class="btn" id="login" href="/auth/google">会社のGoogleアカウントでログイン</a>
       <a class="dev" id="dev" href="/auth/dev" hidden>開発用ログイン（ローカルのみ）</a>
       <footer>株式会社悠三堂</footer>
     </main>
     <script>
       var messages = {
-        forbidden: 'このGoogleアカウントでは使えません。許可されたアカウントでログインしてください。',
+        forbidden: '会社のGoogleアカウント（@yusando.com）でログインしてください。',
         denied: 'Googleでのログインがキャンセルされました。',
         state: 'ログインの有効期限が切れました。もう一度お試しください。',
         token: 'Googleとの連携に失敗しました。もう一度お試しください。',

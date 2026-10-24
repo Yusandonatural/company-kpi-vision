@@ -9,6 +9,7 @@ import { lockinRoutes } from './routes/lockin';
 import { termRoutes } from './routes/terms';
 import { kpiRoutes } from './routes/kpi';
 import { orgRoutes } from './org';
+import { socialRoutes } from './routes/social';
 import { markMissed } from './tasks';
 
 const app = new Hono<AppEnv>();
@@ -28,6 +29,7 @@ app.route('/api', lifeRoutes);
 app.route('/api', lockinRoutes);
 app.route('/api', orgRoutes);
 app.route('/api', kpiRoutes);
+app.route('/api', socialRoutes);
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
 
 export default {

@@ -1,10 +1,19 @@
 import { Link, useParams } from 'react-router-dom';
-import { addDays, daysInRange, mondayOf, shortDate, todayJST, weekday } from '../../shared/dates';
-import { habitLabel, habitScheduled } from '../../shared/progress';
+import { addDays, daysInRange, mondayOf, shortDate, todayJST, weekday, WEEKDAYS_EN } from '../../shared/dates';
+import { habitLabel, habitScheduled, habitWeekdays } from '../../shared/progress';
 import { TermHeader } from '../components/TermHeader';
 import { ErrorBox, Loading, Progress, Stat, metricText, pct } from '../components/ui';
 import { useApi } from '../hooks';
+import { isEn, L } from '../i18n';
 import { FlowStrip, KaizenList } from '../social/Kaizen';
+
+/** habitLabel（日本語）の英語版 */
+function habitText(g: any): string {
+  if (!isEn) return habitLabel(g);
+  if (g.habit_frequency === 'weekly') return `${g.habit_times_per_week ?? 1}× a week`;
+  if (g.habit_frequency === 'weekdays') return habitWeekdays(g).map((w) => WEEKDAYS_EN[w]).join(' · ') || 'No days set';
+  return 'Daily';
+}
 
 export function TermPage() {
   const { id = '' } = useParams();
@@ -29,63 +38,63 @@ export function TermPage() {
 
       <section className="card">
         <div className="row">
-          <span className="card-title">経過</span>
-          <span className="num">{info.elapsedDays} / {info.totalDays}日（{info.elapsedPct}%）</span>
+          <span className="card-title">{L('経過', 'Elapsed')}</span>
+          <span className="num">{L(`${info.elapsedDays} / ${info.totalDays}日（${info.elapsedPct}%）`, `${info.elapsedDays} / ${info.totalDays} days (${info.elapsedPct}%)`)}</span>
         </div>
         <Progress value={info.elapsedPct} tone="gold" />
       </section>
 
       {(info.phase === 'ended' || (info.phase === 'active' && info.daysLeft <= 7)) && !term.nextTerm && (
         <div className="notice">
-          {info.phase === 'ended' ? 'このタームは終わりました。' : `このタームは残り${info.daysLeft}日です。`}
-          <Link className="btn btn-small btn-primary" to={`/terms?new=1&from=${term.id}`}>次のタームを作る</Link>
-          <Link className="btn btn-small" to={`/term/${term.id}/review`}>総括を見る</Link>
+          {info.phase === 'ended' ? L('このタームは終わりました。', 'This term has ended. ') : L(`このタームは残り${info.daysLeft}日です。`, `${info.daysLeft} days left in this term. `)}
+          <Link className="btn btn-small btn-primary" to={`/terms?new=1&from=${term.id}`}>{L('次のタームを作る', 'Create next term')}</Link>
+          <Link className="btn btn-small" to={`/term/${term.id}/review`}>{L('総括を見る', 'See the wrap-up')}</Link>
         </div>
       )}
 
       <div className="stats">
-        <Stat label="タスク達成率" value={pct(term.taskStats.rate)} sub={`できた ${term.taskStats.done} ／ できなかった ${term.taskStats.missed + term.taskStats.carried}`} />
-        <Stat label="プロジェクト平均" value={pct(avg(projects.map((g: any) => g.progress)))} sub={`${projects.length}件`} />
-        <Stat label="習慣 平均達成率" value={pct(avg(habits.map((g: any) => g.progress)))} sub={`${habits.length}件`} />
-        <Stat label="記入率" value={pct(term.fill.pct)} sub={`${term.fill.filled} / ${term.fill.days}日`} />
+        <Stat label={L('タスク達成率', 'Task done rate')} value={pct(term.taskStats.rate)} sub={L(`できた ${term.taskStats.done} ／ できなかった ${term.taskStats.missed + term.taskStats.carried}`, `Done ${term.taskStats.done} / missed ${term.taskStats.missed + term.taskStats.carried}`)} />
+        <Stat label={L('プロジェクト平均', 'Project average')} value={pct(avg(projects.map((g: any) => g.progress)))} sub={L(`${projects.length}件`, `${projects.length}`)} />
+        <Stat label={L('習慣 平均達成率', 'Habit average')} value={pct(avg(habits.map((g: any) => g.progress)))} sub={L(`${habits.length}件`, `${habits.length}`)} />
+        <Stat label={L('記入率', 'Journal fill rate')} value={pct(term.fill.pct)} sub={L(`${term.fill.filled} / ${term.fill.days}日`, `${term.fill.filled} / ${term.fill.days} days`)} />
       </div>
 
       {behind.length > 0 && (
         <div className="notice warn">
-          経過率に対して20ポイント以上遅れている目標: {behind.map((g: any) => g.title).join('、')}
+          {L('経過率に対して20ポイント以上遅れている目標: ', 'Goals 20+ points behind elapsed time: ')}{behind.map((g: any) => g.title).join(L('、', ', '))}
         </div>
       )}
 
       <section className="card">
         <div className="card-head">
-          <h2 className="card-title">この90日のプロジェクト＋改善</h2>
-          <Link className="btn btn-small btn-ghost" to={`/term/${term.id}/goals`}>編集</Link>
+          <h2 className="card-title">{L('この90日のプロジェクト＋改善', 'Projects + Kaizen for these 90 days')}</h2>
+          <Link className="btn btn-small btn-ghost" to={`/term/${term.id}/goals`}>{L('編集', 'Edit')}</Link>
         </div>
-        {projects.length === 0 && <p className="muted">まだありません。<Link to={`/term/${term.id}/goals`}>目標を立てる</Link></p>}
+        {projects.length === 0 && <p className="muted">{L('まだありません。', 'None yet. ')}<Link to={`/term/${term.id}/goals`}>{L('目標を立てる', 'Set goals')}</Link></p>}
         <ul className="goal-progress">
           {projects.map((g: any) => (
             <li key={g.id} className={g.behind ? 'behind' : ''}>
               <div className="row">
                 <span>
                   {g.title}
-                  {g.status !== 'active' && <span className="chip">{{ achieved: '達成', missed: '未達', cancelled: '中止' }[g.status as string]}</span>}
+                  {g.status !== 'active' && <span className="chip">{{ achieved: L('達成', 'Achieved'), missed: L('未達', 'Missed'), cancelled: L('中止', 'Cancelled') }[g.status as string]}</span>}
                 </span>
                 <span className="num">{g.progress}%</span>
               </div>
               <Progress value={g.progress} tone={g.behind ? 'warn' : undefined} />
               {g.vision_goal_id && life.data?.goals?.find((v: any) => v.id === g.vision_goal_id) && (
-                <p className="small vb-link">→ ありたい姿：<Link to="/life">{life.data.goals.find((v: any) => v.id === g.vision_goal_id).title}</Link></p>
+                <p className="small vb-link">→ {L('ありたい姿：', 'Aspiration: ')}<Link to="/life">{life.data.goals.find((v: any) => v.id === g.vision_goal_id).title}</Link></p>
               )}
               <p className="muted small">
-                {metricText(g) && <>数値目標 {metricText(g)} ・ </>}
-                マイルストーン {g.milestones.filter((m: any) => m.done).length} / {g.milestones.length}
-                {g.tasks.total > 0 && ` ・ 関連タスク できた ${g.tasks.done} / ${g.tasks.total}`}
-                {g.due_date && ` ・ 期限 ${shortDate(g.due_date)}`}
+                {metricText(g) && <>{L('数値目標', 'Target')} {metricText(g)} {L('・', '·')} </>}
+                {L('マイルストーン', 'Milestones')} {g.milestones.filter((m: any) => m.done).length} / {g.milestones.length}
+                {g.tasks.total > 0 && L(` ・ 関連タスク できた ${g.tasks.done} / ${g.tasks.total}`, ` · Linked tasks done ${g.tasks.done} / ${g.tasks.total}`)}
+                {g.due_date && L(` ・ 期限 ${shortDate(g.due_date)}`, ` · Due ${shortDate(g.due_date)}`)}
               </p>
               {g.obstacle && (
                 <p className="obstacle small">
-                  <strong>障害:</strong> {g.obstacle}
-                  {g.obstacle_plan && <> → <strong>対策:</strong> {g.obstacle_plan}</>}
+                  <strong>{L('障害:', 'Obstacle:')}</strong> {g.obstacle}
+                  {g.obstacle_plan && <> → <strong>{L('対策:', 'Plan:')}</strong> {g.obstacle_plan}</>}
                 </p>
               )}
               <KaizenList goal={g} term={term} items={imps.filter((i: any) => i.goal_id === g.id)} members={org.data?.members ?? []} onChange={kaizen.reload} />
@@ -95,18 +104,18 @@ export function TermPage() {
       </section>
 
       <section className="card">
-        <h2 className="card-title">習慣</h2>
-        {habits.length === 0 && <p className="muted">まだありません</p>}
+        <h2 className="card-title">{L('習慣', 'Habits')}</h2>
+        {habits.length === 0 && <p className="muted">{L('まだありません', 'None yet')}</p>}
         {habits.map((g: any) => (
           <div key={g.id} className="habit-block">
             <div className="row">
-              <span>{g.title} <span className="muted small">（{habitLabel(g)}）</span></span>
+              <span>{g.title} <span className="muted small">{L('（', '(')}{habitText(g)}{L('）', ')')}</span></span>
               <span className="num">{g.progress}%</span>
             </div>
             <p className="muted small">
-              {g.habit.done} / {g.habit.expected}回
-              {g.habit_frequency !== 'weekly' && ` ・ 連続 ${g.habit.currentStreak}日 ・ 最長 ${g.habit.longestStreak}日`}
-              {g.habit_frequency === 'weekly' && ` ・ 今週 ${g.habit.weekDone}/${g.habit.weekTarget}`}
+              {g.habit.done} / {g.habit.expected}{L('回', '')}
+              {g.habit_frequency !== 'weekly' && L(` ・ 連続 ${g.habit.currentStreak}日 ・ 最長 ${g.habit.longestStreak}日`, ` · Streak ${g.habit.currentStreak} days · Best ${g.habit.longestStreak} days`)}
+              {g.habit_frequency === 'weekly' && L(` ・ 今週 ${g.habit.weekDone}/${g.habit.weekTarget}`, ` · This week ${g.habit.weekDone}/${g.habit.weekTarget}`)}
             </p>
             <Heatmap term={term} goal={g} />
           </div>
@@ -123,7 +132,7 @@ function Heatmap({ term, goal }: { term: any; goal: any }) {
   const weeks: string[] = [];
   for (let w = mondayOf(term.start_date); w <= term.end_date; w = addDays(w, 7)) weeks.push(w);
   return (
-    <div className="heatmap" aria-label={`${goal.title} の達成カレンダー`}>
+    <div className="heatmap" aria-label={L(`${goal.title} の達成カレンダー`, `${goal.title} streak calendar`)}>
       {weeks.map((w) => (
         <div key={w} className="heat-row">
           {daysInRange(w, addDays(w, 6)).map((d) => {

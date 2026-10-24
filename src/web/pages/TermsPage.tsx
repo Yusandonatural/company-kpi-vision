@@ -4,6 +4,7 @@ import { addDays, addMonths, defaultTermFor, shortDate, termTitle, todayJST } fr
 import { api, post } from '../api';
 import { ErrorBox, Loading, Progress, pct } from '../components/ui';
 import { useApi } from '../hooks';
+import { L } from '../i18n';
 
 export function TermsPage() {
   const { data, error, reload } = useApi<any[]>('/terms');
@@ -14,8 +15,8 @@ export function TermsPage() {
   return (
     <div className="page narrow-wide">
       <div className="card-head">
-        <h1 className="page-title">ターム一覧</h1>
-        {!creating && <button className="btn btn-primary" onClick={() => setCreating(true)}>新しいターム</button>}
+        <h1 className="page-title">{L('ターム一覧', 'Terms')}</h1>
+        {!creating && <button className="btn btn-primary" onClick={() => setCreating(true)}>{L('新しいターム', 'New term')}</button>}
       </div>
       {creating && <NewTerm terms={data} fromId={q.get('from')} onCancel={() => setCreating(false)} />}
       <ul className="term-list">
@@ -24,9 +25,9 @@ export function TermsPage() {
             <Link to={`/term/${t.id}`} className="term-link">
               <div className="row">
                 <strong>{t.title}</strong>
-                <span className="chip">{{ upcoming: 'これから', active: '進行中', ended: '終了' }[t.info.phase as string]}</span>
+                <span className="chip">{{ upcoming: L('これから', 'Upcoming'), active: L('進行中', 'Active'), ended: L('終了', 'Ended') }[t.info.phase as string]}</span>
               </div>
-              <p className="muted small">{shortDate(t.start_date)}〜{shortDate(t.end_date)}（{t.info.totalDays}日） ・ 目標 {t.goalCount}個 ・ タスク達成率 {pct(t.taskStats.rate)}</p>
+              <p className="muted small">{L(`${shortDate(t.start_date)}〜${shortDate(t.end_date)}（${t.info.totalDays}日） ・ 目標 ${t.goalCount}個 ・ タスク達成率 ${pct(t.taskStats.rate)}`, `${shortDate(t.start_date)}–${shortDate(t.end_date)} (${t.info.totalDays} days) · ${t.goalCount} goals · Task done rate ${pct(t.taskStats.rate)}`)}</p>
               <Progress value={t.info.elapsedPct} tone="gold" />
             </Link>
           </li>
@@ -67,30 +68,30 @@ function NewTerm({ terms, fromId, onCancel }: { terms: any[]; fromId: string | n
 
   return (
     <section className="card">
-      <h2 className="card-title">新しいターム</h2>
+      <h2 className="card-title">{L('新しいターム', 'New term')}</h2>
       <div className="form">
         <div className="form-row">
-          <label>開始日<input type="date" value={f.start_date} onChange={(e) => setF({ ...f, start_date: e.target.value, end_date: addDays(addMonths(e.target.value, 3), -1) })} /></label>
-          <label>終了日<input type="date" value={f.end_date} onChange={(e) => setF({ ...f, end_date: e.target.value })} /></label>
+          <label>{L('開始日', 'Start date')}<input type="date" value={f.start_date} onChange={(e) => setF({ ...f, start_date: e.target.value, end_date: addDays(addMonths(e.target.value, 3), -1) })} /></label>
+          <label>{L('終了日', 'End date')}<input type="date" value={f.end_date} onChange={(e) => setF({ ...f, end_date: e.target.value })} /></label>
         </div>
-        <label>名前<input value={f.title} placeholder={termTitle(f.start_date, f.end_date)} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
+        <label>{L('名前', 'Name')}<input value={f.title} placeholder={termTitle(f.start_date, f.end_date)} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
         {goals.length > 0 && (
           <fieldset>
-            <legend>「{source.title}」から引き継ぐ目標</legend>
+            <legend>{L(`「${source.title}」から引き継ぐ目標`, `Goals to carry over from “${source.title}”`)}</legend>
             {goals.map((g) => (
               <label key={g.id} className="check">
                 <input type="checkbox" checked={copy.includes(g.id)} onChange={(e) => setCopy(e.target.checked ? [...copy, g.id] : copy.filter((x) => x !== g.id))} />
-                <span>{g.type === 'habit' ? '習慣: ' : ''}{g.title} <span className="muted small">{g.progress}%</span></span>
+                <span>{g.type === 'habit' ? L('習慣: ', 'Habit: ') : ''}{g.title} <span className="muted small">{g.progress}%</span></span>
               </label>
             ))}
-            <p className="muted small">プロジェクトは未完了のマイルストーンだけを引き継ぎます。</p>
+            <p className="muted small">{L('プロジェクトは未完了のマイルストーンだけを引き継ぎます。', 'Projects carry over only their unfinished milestones.')}</p>
           </fieldset>
         )}
         {err && <p className="form-error">{err}</p>}
         <div className="form-actions">
           <span className="spacer" />
-          <button className="btn" onClick={onCancel}>キャンセル</button>
-          <button className="btn btn-primary" onClick={create}>作成して目標を立てる</button>
+          <button className="btn" onClick={onCancel}>{L('キャンセル', 'Cancel')}</button>
+          <button className="btn btn-primary" onClick={create}>{L('作成して目標を立てる', 'Create and set goals')}</button>
         </div>
       </div>
     </section>

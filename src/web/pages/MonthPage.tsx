@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { addDays, daysInRange, mondayOf, monthStart, shortDate, todayJST, WEEKDAYS_JA, weekday } from '../../shared/dates';
+import { addDays, daysInRange, mondayOf, monthLabel, monthStart, shortDate, todayJST, weekday, weekdayName } from '../../shared/dates';
 import { CalendarError, CalendarPicker, EventModal, eventsOn, eventTime, useEvents, type CalEvent } from '../components/calendar';
 import { ByGoalTable, DoneMissedLists, GoalProgressList, GoodsList, PeriodStats, PlanEditor, ReviewForm, useNote } from '../components/period';
 import { ErrorBox, Loading, SaveBadge, SubTabs, pct } from '../components/ui';
 import { useApi } from '../hooks';
+import { L } from '../i18n';
 import { dayRange } from './WeekPage';
 
 export function MonthPage({ tab }: { tab: 'plan' | 'review' }) {
@@ -15,7 +16,8 @@ export function MonthPage({ tab }: { tab: 'plan' | 'review' }) {
   return <MonthView key={start} data={data} tab={tab} reload={reload} />;
 }
 
-const monthLabel = (d: string) => `${Number(d.slice(0, 4))}年${Number(d.slice(5, 7))}月`;
+// 2026-01-04 は日曜。曜日名は weekdayName で言語に合わせる
+const wdName = (w: number) => weekdayName(`2026-01-${String(4 + w).padStart(2, '0')}`);
 
 function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; reload: () => void }) {
   const { start, end, today } = data;
@@ -27,20 +29,20 @@ function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; r
   return (
     <div className="page">
       <header className="period-header">
-        <Link className="icon-btn" to={`/month/${data.prev}${suffix}`} aria-label="前の月">‹</Link>
+        <Link className="icon-btn" to={`/month/${data.prev}${suffix}`} aria-label={L('前の月', 'Previous month')}>‹</Link>
         <div>
           <h1 className="page-title">{monthLabel(start)}</h1>
           {data.term && <p className="muted small">{data.term.title}{dayRange(data.term, start, end)}</p>}
         </div>
-        <Link className="icon-btn" to={`/month/${data.next}${suffix}`} aria-label="次の月">›</Link>
+        <Link className="icon-btn" to={`/month/${data.next}${suffix}`} aria-label={L('次の月', 'Next month')}>›</Link>
       </header>
       <div className="period-toolbar">
         <SubTabs items={[
-          { to: base, label: '月間予定', active: tab === 'plan' },
-          { to: `${base}/review`, label: '月間レビュー', active: tab === 'review' },
+          { to: base, label: L('月間予定', 'Month plan'), active: tab === 'plan' },
+          { to: `${base}/review`, label: L('月間レビュー', 'Month review'), active: tab === 'review' },
         ]} />
         <span className="spacer" />
-        {start !== thisMonth && <Link className="btn btn-small" to={`/month/${thisMonth}${suffix}`}>今月へ</Link>}
+        {start !== thisMonth && <Link className="btn btn-small" to={`/month/${thisMonth}${suffix}`}>{L('今月へ', 'This month')}</Link>}
         <SaveBadge state={save.state} />
       </div>
 
@@ -51,7 +53,7 @@ function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; r
           <div className="plan-grid">
             <PlanEditor note={note} update={update} unit="月" prevNext={data.prevNote.review_next} />
             <section className="card">
-              <h2 className="card-title">3ヶ月の目標</h2>
+              <h2 className="card-title">{L('3ヶ月の目標', '90-day goals')}</h2>
               <GoalProgressList goals={data.goals} />
             </section>
           </div>
@@ -63,13 +65,13 @@ function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; r
           <PeriodStats data={data} unit="月" />
           {note.targets.length > 0 && (
             <section className="card">
-              <h2 className="card-title">今月の目標の結果</h2>
+              <h2 className="card-title">{L('今月の目標の結果', 'This month’s target results')}</h2>
               <ul className="plain-list">
                 {note.targets.map((t, i) => (
                   <li key={i}>
                     <label className="check">
                       <input type="checkbox" checked={t.done} onChange={(e) => update({ targets: note.targets.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) }, true)} />
-                      <span className={t.done ? 'done' : ''}>{t.text || '（空欄）'}</span>
+                      <span className={t.done ? 'done' : ''}>{t.text || L('（空欄）', '(blank)')}</span>
                     </label>
                   </li>
                 ))}
@@ -79,18 +81,18 @@ function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; r
           <WeeksList weeks={data.weeks} review />
           <div className="two-col">
             <section className="card">
-              <h2 className="card-title">目標別</h2>
+              <h2 className="card-title">{L('目標別', 'By goal')}</h2>
               <ByGoalTable rows={data.byGoal} />
             </section>
             <section className="card">
-              <h2 className="card-title">習慣</h2>
-              {data.habits.length === 0 && <p className="muted">習慣目標はまだありません</p>}
+              <h2 className="card-title">{L('習慣', 'Habits')}</h2>
+              {data.habits.length === 0 && <p className="muted">{L('習慣目標はまだありません', 'No habit goals yet')}</p>}
               <table className="simple-table">
                 <tbody>
                   {data.habits.map((h: any) => (
                     <tr key={h.id}>
                       <td>{h.title}</td>
-                      <td className="num">{h.done} / {h.target}回</td>
+                      <td className="num">{h.done} / {h.target}{L('回', '')}</td>
                       <td className="num">{h.target ? `${Math.round((h.done / h.target) * 100)}%` : '—'}</td>
                     </tr>
                   ))}
@@ -99,13 +101,13 @@ function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; r
             </section>
           </div>
           <section className="card">
-            <h2 className="card-title">3ヶ月の目標の進み具合</h2>
+            <h2 className="card-title">{L('3ヶ月の目標の進み具合', '90-day goal progress')}</h2>
             <GoalProgressList goals={data.goals} />
           </section>
           <DoneMissedLists days={data.days} today={today} onChange={reload} />
           <GoodsList days={data.days} />
-          <ReviewForm note={note} update={update} nextLabel="来月に活かすこと" state={save.state} />
-          <p className="next-link"><Link className="btn" to={`/month/${data.next}`}>来月の予定を立てる →</Link></p>
+          <ReviewForm note={note} update={update} nextLabel={L('来月に活かすこと', 'To carry into next month')} state={save.state} />
+          <p className="next-link"><Link className="btn" to={`/month/${data.next}`}>{L('来月の予定を立てる →', 'Plan next month →')}</Link></p>
         </>
       )}
     </div>
@@ -122,12 +124,12 @@ function MonthGrid({ data, today }: { data: any; today: string }) {
   return (
     <section className="card">
       <div className="card-head">
-        <h2 className="card-title">月間スケジュール</h2>
+        <h2 className="card-title">{L('月間スケジュール', 'Monthly schedule')}</h2>
         <CalendarPicker onChange={reload} />
       </div>
       {error && <CalendarError message={error} />}
       <div className="month-grid" role="grid">
-        {['月', '火', '水', '木', '金', '土', '日'].map((w) => (
+        {[1, 2, 3, 4, 5, 6, 0].map(wdName).map((w) => (
           <div key={w} className="month-wd" role="columnheader">{w}</div>
         ))}
         {daysInRange(gridStart, gridEnd).map((date) => {
@@ -147,10 +149,10 @@ function MonthGrid({ data, today }: { data: any; today: string }) {
               }}
             >
               <div className="month-cell-head">
-                <Link to={`/day/${date}`} className={`month-num ${weekday(date) === 0 ? 'sun' : weekday(date) === 6 ? 'sat' : ''}`} aria-label={`${shortDate(date)}（${WEEKDAYS_JA[weekday(date)]}）のページ`}>
+                <Link to={`/day/${date}`} className={`month-num ${weekday(date) === 0 ? 'sun' : weekday(date) === 6 ? 'sat' : ''}`} aria-label={L(`${shortDate(date)}（${weekdayName(date)}）のページ`, `Open ${weekdayName(date)} ${shortDate(date)}`)}>
                   {Number(date.slice(8))}
                 </Link>
-                <button type="button" className="icon-btn small add" aria-label={`${shortDate(date)} に予定を追加`} onClick={() => setEdit({ date })}>＋</button>
+                <button type="button" className="icon-btn small add" aria-label={L(`${shortDate(date)} に予定を追加`, `Add event on ${shortDate(date)}`)} onClick={() => setEdit({ date })}>＋</button>
               </div>
               <ul className="month-events">
                 {evs.slice(0, 3).map((e) => (
@@ -161,10 +163,10 @@ function MonthGrid({ data, today }: { data: any; today: string }) {
                     </button>
                   </li>
                 ))}
-                {evs.length > 3 && <li className="muted small">ほか{evs.length - 3}件</li>}
+                {evs.length > 3 && <li className="muted small">{L(`ほか${evs.length - 3}件`, `+${evs.length - 3} more`)}</li>}
               </ul>
               {tasks.length > 0 && (
-                <div className="task-dots" aria-label={`タスク ${tasks.length}件`}>
+                <div className="task-dots" aria-label={L(`タスク ${tasks.length}件`, `${tasks.length} tasks`)}>
                   {tasks.map((t: any) => (
                     <span key={t.id} className={`dot status-${t.status}`} title={t.title} />
                   ))}
@@ -175,7 +177,7 @@ function MonthGrid({ data, today }: { data: any; today: string }) {
         })}
       </div>
       <p className="legend muted small">
-        <span className="dot status-done" /> できた <span className="dot status-missed" /> できなかった <span className="dot status-todo" /> 未着手 ・ 枠が緑の日は記入完了
+        <span className="dot status-done" /> {L('できた', 'Done')} <span className="dot status-missed" /> {L('できなかった', 'Missed')} <span className="dot status-todo" /> {L('未着手 ・ 枠が緑の日は記入完了', 'Not started · green border = journal filled')}
       </p>
       {edit && <EventModal date={edit.date} event={edit.event} onClose={() => setEdit(null)} onSaved={reload} />}
     </section>
@@ -185,19 +187,19 @@ function MonthGrid({ data, today }: { data: any; today: string }) {
 function WeeksList({ weeks, review }: { weeks: any[]; review?: boolean }) {
   return (
     <section className="card">
-      <h2 className="card-title">{review ? '週ごとのふりかえり' : 'この月の週'}</h2>
+      <h2 className="card-title">{review ? L('週ごとのふりかえり', 'Weekly reviews') : L('この月の週', 'Weeks in this month')}</h2>
       <table className="simple-table">
         <thead>
-          <tr><th>週</th><th>テーマ</th><th>達成率</th>{review && <th>評価</th>}<th>レビュー</th></tr>
+          <tr><th>{L('週', 'Week')}</th><th>{L('テーマ', 'Theme')}</th><th>{L('達成率', 'Done rate')}</th>{review && <th>{L('評価', 'Rating')}</th>}<th>{L('レビュー', 'Review')}</th></tr>
         </thead>
         <tbody>
           {weeks.map((w) => (
             <tr key={w.start}>
-              <td><Link to={`/week/${w.start}`}>{shortDate(w.start)}〜</Link></td>
+              <td><Link to={`/week/${w.start}`}>{shortDate(w.start)}{L('〜', '–')}</Link></td>
               <td>{w.note.theme || <span className="muted">—</span>}</td>
               <td className="num">{pct(w.stats.rate)}</td>
               {review && <td>{w.note.review_score ? <span className="stars-text">{'★'.repeat(w.note.review_score)}</span> : <span className="muted">—</span>}</td>}
-              <td><Link to={`/week/${w.start}/review`}>{w.note.reviewed ? '✓ 済み' : 'まだ'}</Link></td>
+              <td><Link to={`/week/${w.start}/review`}>{w.note.reviewed ? L('✓ 済み', '✓ Done') : L('まだ', 'Not yet')}</Link></td>
             </tr>
           ))}
         </tbody>
@@ -212,13 +214,13 @@ function DateJump({ data, today }: { data: any; today: string }) {
   const gridEnd = addDays(mondayOf(data.end), 6);
   const byDate = new Map(data.days.map((d: any) => [d.date, d]));
   return (
-    <nav className="card date-jump" aria-label="日付をえらんでその日のページへ">
+    <nav className="card date-jump" aria-label={L('日付をえらんでその日のページへ', 'Pick a date to open that day')}>
       <div className="card-head">
-        <h2 className="card-title">日付へ移動</h2>
-        <Link className="btn btn-small" to={`/day/${today}`}>今日</Link>
+        <h2 className="card-title">{L('日付へ移動', 'Jump to date')}</h2>
+        <Link className="btn btn-small" to={`/day/${today}`}>{L('今日', 'Today')}</Link>
       </div>
       <div className="dj-grid">
-        {['月', '火', '水', '木', '金', '土', '日'].map((w, i) => (
+        {[1, 2, 3, 4, 5, 6, 0].map(wdName).map((w, i) => (
           <span key={w} className={`dj-wd ${i === 5 ? 'sat' : i === 6 ? 'sun' : ''}`}>{w}</span>
         ))}
         {daysInRange(gridStart, gridEnd).map((date) => {
@@ -232,7 +234,7 @@ function DateJump({ data, today }: { data: any; today: string }) {
               key={date}
               to={`/day/${date}`}
               className={`dj-cell ${date === today ? 'today' : ''} ${d.completed ? 'filled' : ''} ${w === 0 ? 'sun' : w === 6 ? 'sat' : ''}`}
-              aria-label={`${shortDate(date)}（${WEEKDAYS_JA[w]}）${d.completed ? ' 記入済み' : ''}${tasks.length ? ` タスク ${done}/${tasks.length}` : ''}`}
+              aria-label={L(`${shortDate(date)}（${weekdayName(date)}）${d.completed ? ' 記入済み' : ''}${tasks.length ? ` タスク ${done}/${tasks.length}` : ''}`, `${weekdayName(date)} ${shortDate(date)}${d.completed ? ', filled' : ''}${tasks.length ? `, tasks ${done}/${tasks.length}` : ''}`)}
             >
               <span className="dj-num">{Number(date.slice(8))}</span>
               {tasks.length > 0 && <span className={`dj-mark ${done === tasks.length ? 'all' : done > 0 ? 'some' : 'none'}`} aria-hidden="true" />}
@@ -241,7 +243,7 @@ function DateJump({ data, today }: { data: any; today: string }) {
         })}
       </div>
       <p className="legend muted small">
-        <span className="dj-legend filled" /> 記入済み <span className="dot status-done" /> タスク全部できた <span className="dot dj-some" /> 一部できた
+        <span className="dj-legend filled" /> {L('記入済み', 'Filled')} <span className="dot status-done" /> {L('タスク全部できた', 'All tasks done')} <span className="dot dj-some" /> {L('一部できた', 'Some done')}
       </p>
     </nav>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { put } from '../api';
 import { ErrorBox, Loading, SaveBadge } from '../components/ui';
 import { useApi, useAutosave } from '../hooks';
+import { L } from '../i18n';
 import { AnnualKpis } from '../social/AnnualKpis';
 import { VisionBoard } from '../social/VisionBoard';
 
@@ -22,14 +23,17 @@ function LifeView({ data, reload, owner }: { data: any; reload: () => void; owne
   return (
     <div className="page narrow-wide life-page">
       <header className="life-hero">
-        <p className="life-eyebrow">ミッション → ビジョン → 90日のプロジェクト＋改善</p>
-        <h1 className="page-title">悠三堂はどこへ向かうか</h1>
-        <p className="muted">ミッション（なぜ存在するか）から、ビジョン（どこへ行くか）を決め、90日ごとのプロジェクトと改善でやりきります。{owner ? '' : '書き換えられるのは代表だけです。'}</p>
+        <p className="life-eyebrow">{L('ミッション → ビジョン → 90日のプロジェクト＋改善', 'Mission → Vision → 90-day projects + Kaizen')}</p>
+        <h1 className="page-title">{L('悠三堂はどこへ向かうか', 'Where Yusando is heading')}</h1>
+        <p className="muted">
+          {L('ミッション（なぜ存在するか）から、ビジョン（どこへ行くか）を決め、90日ごとのプロジェクトと改善でやりきります。', 'From the mission (why we exist) we set the vision (where we are going), then deliver it through 90-day projects and kaizen.')}
+          {owner ? '' : L('書き換えられるのは代表だけです。', ' Only the CEO can edit this.')}
+        </p>
       </header>
 
       <section className="card vision-card mission-card">
         <div className="card-head">
-          <h2 className="card-title"><span className="step-no">1</span>ミッション</h2>
+          <h2 className="card-title"><span className="step-no">1</span>{L('ミッション', 'Mission')}</h2>
           <SaveBadge state={save.state} />
         </div>
         <textarea
@@ -37,8 +41,8 @@ function LifeView({ data, reload, owner }: { data: any; reload: () => void; owne
           rows={2}
           value={mission}
           readOnly={!owner}
-          aria-label="ミッション"
-          placeholder="例: 自然の恵みを、まっすぐ人に届ける。"
+          aria-label={L('ミッション', 'Mission')}
+          placeholder={L('例: 自然の恵みを、まっすぐ人に届ける。', 'e.g. Bring nature’s gifts straight to people.')}
           onChange={(e) => {
             setMission(e.target.value);
             save.schedule({ mission: e.target.value });
@@ -48,7 +52,7 @@ function LifeView({ data, reload, owner }: { data: any; reload: () => void; owne
 
       <section className="card vision-card">
         <div className="card-head">
-          <h2 className="card-title"><span className="step-no">2</span>ビジョン</h2>
+          <h2 className="card-title"><span className="step-no">2</span>{L('ビジョン', 'Vision')}</h2>
           <SaveBadge state={save.state} />
         </div>
         <textarea
@@ -56,8 +60,8 @@ function LifeView({ data, reload, owner }: { data: any; reload: () => void; owne
           rows={2}
           value={vision}
           readOnly={!owner}
-          aria-label="会社のビジョン"
-          placeholder="例: 自然茶を、世界20か国の食卓へ。"
+          aria-label={L('会社のビジョン', 'Company vision')}
+          placeholder={L('例: 自然茶を、世界20か国の食卓へ。', 'e.g. Natural tea on tables in 20 countries.')}
           onChange={(e) => {
             setVision(e.target.value);
             save.schedule({ vision: e.target.value });

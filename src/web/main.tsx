@@ -4,8 +4,10 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import './styles.css';
 import './social.css';
+import { applyLang } from './i18n';
 import { applyUiMode } from './uiMode';
 
+applyLang();
 applyUiMode();
 
 createRoot(document.getElementById('root')!).render(

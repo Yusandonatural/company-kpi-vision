@@ -9,6 +9,7 @@ import { createTask, markMissed, nextMightPosition, nextPosition } from '../task
 import { lifeSummary } from './life';
 import { lockinForDay, writeRuleLog } from './lockin';
 import { parseEvent } from '../../shared/lockin';
+import { autoPost, retractAutoPost } from './social';
 
 export const dayRoutes = new Hono<AppEnv>();
 
@@ -153,6 +154,12 @@ dayRoutes.patch('/tasks/:id', async (c) => {
       `UPDATE tasks SET ${keys.map((k) => `${k} = ?`).join(', ')}, notion_dirty = ?, updated_at = datetime('now') WHERE id = ?`,
       ...keys.map((k) => f[k]), dirty, t.id,
     );
+  }
+  // 「やるべきこと」ができたらタイムラインへ。取り消したら消す
+  if (f.status && t.kind === 'must') {
+    const title = (f.title as string) ?? t.title;
+    if (f.status === 'done' && t.status !== 'done') await autoPost(c.env.DB, u.id, 'task_done', t.id, title, (f.goal_id as string | null | undefined) ?? t.goal_id);
+    if (f.status !== 'done' && t.status === 'done') await retractAutoPost(c.env.DB, 'task_done', t.id);
   }
   syncLater(c);
   return c.json(await one(c.env.DB, 'SELECT * FROM tasks WHERE id = ?', t.id));
@@ -328,6 +335,11 @@ dayRoutes.on(['PUT', 'POST'], '/periods/:kind/:start', async (c) => {
   }
   if ('review_score' in b) f.review_score = b.review_score == null ? null : Math.max(1, Math.min(5, Math.round(Number(b.review_score))));
   if ('reviewed' in b) f.reviewed = b.reviewed ? 1 : 0;
+  if (b.reviewed) {
+    const label = kind === 'week' ? `${start.slice(5).replace('-', '/')}の週` : `${Number(start.slice(5, 7))}月`;
+    const text = [b.review_good ?? '', b.review_learn ?? ''].map((x) => str(x, 200).trim()).filter(Boolean).join('\n');
+    await autoPost(c.env.DB, u.id, 'review', `${u.id}:${kind}:${start}`, `${label}のレビューを書きました${text ? '\n' + text : ''}`);
+  }
   const keys = Object.keys(f);
   if (keys.length) {
     await run(

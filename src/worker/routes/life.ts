@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { all, one, run, uid } from '../db';
+import { isDate } from '../../shared/dates';
 import { HttpError, ORG, type AppEnv } from '../env';
 import { requireManager } from '../org';
 
@@ -48,8 +49,14 @@ lifeRoutes.post('/life/goals', async (c) => {
   if (!title) throw new HttpError(400, '目標を入れてください');
   const max = await one(c.env.DB, 'SELECT COALESCE(MAX(sort_order), -1) AS m FROM life_goals WHERE user_id = ?', u.id);
   const id = uid();
-  const horizon = [1, 3, 10].includes(Number(b.horizon)) ? Number(b.horizon) : 10;
-  await run(c.env.DB, 'INSERT INTO life_goals (id, user_id, title, category, sort_order, horizon) VALUES (?, ?, ?, ?, ?, ?)', id, u.id, title, str(b.category, 40), (max?.m ?? -1) + 1, horizon);
+  // horizon 0 =「これまで」（成し遂げたこと）。実現した日（achieved_at）を付けて入れる
+  const horizon = [0, 1, 3, 10].includes(Number(b.horizon)) ? Number(b.horizon) : 10;
+  const achieved = horizon === 0 ? (isDate(b.achieved_at) ? b.achieved_at : new Date().toISOString().slice(0, 10)) : null;
+  await run(
+    c.env.DB,
+    'INSERT INTO life_goals (id, user_id, title, category, sort_order, horizon, status, achieved_at, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    id, u.id, title, str(b.category, 40), (max?.m ?? -1) + 1, horizon, achieved ? 'done' : 'todo', achieved, str(b.note, 2000),
+  );
   return c.json(await one(c.env.DB, 'SELECT * FROM life_goals WHERE id = ?', id));
 });
 
@@ -66,10 +73,11 @@ lifeRoutes.patch('/life/goals/:id', async (c) => {
     f.achieved_at = b.achieved ? new Date().toISOString().slice(0, 10) : null;
     f.status = b.achieved ? 'done' : 'todo';
   }
-  if ('horizon' in b && [1, 3, 10].includes(Number(b.horizon))) f.horizon = Number(b.horizon);
+  if ('horizon' in b && [0, 1, 3, 10].includes(Number(b.horizon))) f.horizon = Number(b.horizon);
+  if ('achieved_at' in b && isDate(b.achieved_at)) f.achieved_at = b.achieved_at;
   if ('status' in b && ['todo', 'doing', 'done'].includes(b.status)) {
     f.status = b.status;
-    f.achieved_at = b.status === 'done' ? (g.achieved_at ?? new Date().toISOString().slice(0, 10)) : null;
+    f.achieved_at = b.status === 'done' ? ((f.achieved_at as string | undefined) ?? g.achieved_at ?? new Date().toISOString().slice(0, 10)) : null;
   }
   const keys = Object.keys(f);
   if (keys.length) await run(c.env.DB, `UPDATE life_goals SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...keys.map((k) => f[k]), g.id);

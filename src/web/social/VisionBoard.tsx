@@ -27,12 +27,14 @@ export function VisionBoard({ goals, owner, onChange }: { goals: any[]; owner: b
     <section className="card vboard">
       <div className="card-head">
         <h2 className="card-title"><span className="step-no">3</span>ビジョンボード</h2>
-        <span className="muted small">ありたい姿に、90日のプロジェクトをつなげます</span>
+        <span className="muted small">これまで → 1年後 → 3年後 → 10年後。ありたい姿に90日のプロジェクトをつなげます</span>
       </div>
       {err && <p className="form-error">{err}</p>}
       <div className="vb-lanes">
+        <PastLane goals={goals} owner={owner} act={act} />
         {HORIZONS.map((h) => {
-          const items = goals.filter((g) => (g.horizon ?? 10) === h.k).sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done') || a.sort_order - b.sort_order);
+          // 実現したものは「これまで」の列に移る
+          const items = goals.filter((g) => (g.horizon ?? 10) === h.k && g.status !== 'done').sort((a, b) => a.sort_order - b.sort_order);
           return (
             <div key={h.k} className="vb-lane">
               <div className="vb-lane-head">
@@ -47,6 +49,64 @@ export function VisionBoard({ goals, owner, onChange }: { goals: any[]; owner: b
         })}
       </div>
     </section>
+  );
+}
+
+const ym = (d?: string | null) => (d ? `${d.slice(0, 4)}年${Number(d.slice(5, 7))}月` : '');
+
+/** これまで（成し遂げたこと）。直接書き足したものと、ありたい姿のうち実現したものが、新しい順に並ぶ */
+function PastLane({ goals, owner, act }: { goals: any[]; owner: boolean; act: (fn: () => Promise<unknown>) => Promise<void> }) {
+  const items = goals
+    .filter((g) => (g.horizon ?? 10) === 0 || g.status === 'done')
+    .sort((a, b) => String(b.achieved_at ?? '').localeCompare(String(a.achieved_at ?? '')));
+  const [f, setF] = useState({ title: '', achieved_at: todayJST().slice(0, 7) });
+  const [editing, setEditing] = useState<string | null>(null);
+  return (
+    <div className="vb-lane vb-past">
+      <div className="vb-lane-head">
+        <h3>これまで</h3>
+        <span className="muted small">成し遂げたこと {items.length}件</span>
+      </div>
+      <ol className="vb-timeline">
+        {items.map((g) => (
+          <li key={g.id}>
+            <span className="vb-when">{ym(g.achieved_at)}</span>
+            <div className="vb-done-body">
+              <b>{g.title}</b>
+              {g.note && <span className="vb-note">{g.note}</span>}
+              {(g.horizon ?? 10) !== 0 && <span className="muted small">{g.horizon}年後のありたい姿を実現</span>}
+              {g.projects?.length > 0 && <span className="muted small">プロジェクト {g.projects.length}件</span>}
+            </div>
+            {owner && (
+              editing === g.id ? (
+                <span className="vb-past-edit">
+                  <input type="month" aria-label="実現した年月" defaultValue={(g.achieved_at ?? '').slice(0, 7)} onBlur={(e) => e.target.value && act(() => patch(`/life/goals/${g.id}`, { achieved_at: `${e.target.value}-01` }))} />
+                  {(g.horizon ?? 10) !== 0 && <button className="btn btn-small btn-ghost" onClick={() => act(() => patch(`/life/goals/${g.id}`, { status: 'doing' }))}>ボードに戻す</button>}
+                  <button className="btn btn-small btn-danger" onClick={() => act(() => del(`/life/goals/${g.id}`))}>削除</button>
+                  <button className="btn btn-small btn-ghost" onClick={() => setEditing(null)}>閉じる</button>
+                </span>
+              ) : (
+                <button className="icon-btn small" aria-label="編集" onClick={() => setEditing(g.id)}>…</button>
+              )
+            )}
+          </li>
+        ))}
+      </ol>
+      {items.length === 0 && <p className="muted small">これまでに成し遂げたことを残しておくと、ここに並びます。</p>}
+      {owner && (
+        <form
+          className="vb-add vb-add-past"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (f.title.trim()) act(() => post('/life/goals', { title: f.title, horizon: 0, achieved_at: `${f.achieved_at || todayJST().slice(0, 7)}-01` })).then(() => setF({ ...f, title: '' }));
+          }}
+        >
+          <input id="vb-new-past-when" type="month" aria-label="成し遂げた年月" value={f.achieved_at} onChange={(e) => setF({ ...f, achieved_at: e.target.value })} />
+          <input id="vb-new-past" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="＋ 成し遂げたこと" aria-label="成し遂げたことを追加" />
+          {f.title.trim() && <button className="btn btn-small btn-primary">追加</button>}
+        </form>
+      )}
+    </div>
   );
 }
 

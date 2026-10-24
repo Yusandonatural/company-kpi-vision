@@ -163,4 +163,11 @@ await boss('PATCH', `/api/life/goals/${vb.id}`, { status: 'done' });
 lifeNow = await boss('GET', '/api/life');
 ok(lifeNow.goals.find((x) => x.id === vb.id).achieved_at, '実現にすると達成日が入る');
 ok(!(await boss('GET', '/api/stories')).board.some((b) => b.id === vb.id), '実現したものはストーリーズから外れる');
+// これまで（成し遂げたこと）
+const past = await boss('POST', '/api/life/goals', { title: '自社ブランドの販売を開始', horizon: 0, achieved_at: '2024-04-01' });
+ok(past.horizon === 0 && past.status === 'done' && past.achieved_at === '2024-04-01', '成し遂げたことを年月つきで足せる');
+await boss('PATCH', `/api/life/goals/${past.id}`, { achieved_at: '2024-05-01' });
+const lifePast = await staff('GET', '/api/life');
+ok(lifePast.goals.find((x) => x.id === past.id).achieved_at === '2024-05-01', '成し遂げた年月を直せる');
+ok(!(await staff('GET', '/api/stories')).board.some((b) => b.id === past.id), '成し遂げたことはストーリーズの「ありたい姿」には出ない');
 console.log('ALL OK');

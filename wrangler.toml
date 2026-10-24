@@ -15,13 +15,15 @@ run_worker_first = ["/api/*", "/auth/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "yusando-kpi-board"
-# まだ作っていない。`npx wrangler d1 create yusando-kpi-board` で表示された ID に置き換える
-database_id = "00000000-0000-0000-0000-000000000000"
+# 2026-10-24 作成（APAC）。テーブルは migrations の 0001〜0008 を適用済み
+database_id = "5176f19a-01de-4598-8e3a-651d31a3563c"
 migrations_dir = "migrations"
 
-# 15分ごと: 期限切れタスクを「できなかった」に更新し、Notion と同期する
-[triggers]
-crons = ["*/15 * * * *"]
+# 定期実行（15分ごと: 期限切れタスクを「できなかった」に更新し、Notion と同期）は会社版では止めている。
+# Cloudflare の無料プランは1アカウント5つまでで、ほかのアプリで埋まっているため。
+# 期限切れの判定は画面を開いたときにも行われる。Notion 連携を使うときは、有料プランにして戻す:
+# [triggers]
+# crons = ["*/15 * * * *"]
 
 [vars]
 APP_TIMEZONE = "Asia/Tokyo"

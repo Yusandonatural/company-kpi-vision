@@ -68,7 +68,7 @@ export function PostCard({ p, meId, isOwner, onDeleted }: { p: any; meId?: strin
           <span className="post-names">
             <b>{name}</b>
             <span className="post-meta">
-              {[ROLE[p.user_role], p.department_name].filter(Boolean).join('・')}
+              {[ROLE[p.user_role], p.department_name].filter(Boolean).join(L('・', ' · '))}
               {(ROLE[p.user_role] || p.department_name) && ' · '}
               <time dateTime={p.created_at}>{timeAgo(p.created_at)}</time>
             </span>

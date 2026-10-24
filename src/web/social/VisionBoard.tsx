@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { monthLabel, todayJST } from '../../shared/dates';
+import { MONTHS_EN, monthLabel, todayJST } from '../../shared/dates';
 import { del, patch, post } from '../api';
 import { L } from '../i18n';
 
@@ -55,6 +55,26 @@ export function VisionBoard({ goals, owner, onChange }: { goals: any[]; owner: b
 
 const ym = (d?: string | null) => (d ? monthLabel(d) : '');
 
+/** 年と月を選ぶ（type="month" は Safari・Firefox のパソコン版で使えないため）。値は 'YYYY-MM' */
+function YearMonth({ value, onChange, idPrefix }: { value: string; onChange: (v: string) => void; idPrefix?: string }) {
+  const now = Number(todayJST().slice(0, 4));
+  const y = Number(value.slice(0, 4)) || now;
+  const m = Number(value.slice(5, 7)) || 1;
+  const years: number[] = [];
+  for (let n = now; n >= 1950; n--) years.push(n);
+  const set = (yy: number, mm: number) => onChange(`${yy}-${String(mm).padStart(2, '0')}`);
+  return (
+    <span className="vb-ym">
+      <select id={idPrefix && `${idPrefix}-year`} aria-label={L('年', 'Year')} value={y} onChange={(e) => set(Number(e.target.value), m)}>
+        {years.map((n) => <option key={n} value={n}>{L(`${n}年`, String(n))}</option>)}
+      </select>
+      <select id={idPrefix && `${idPrefix}-month`} aria-label={L('月', 'Month')} value={m} onChange={(e) => set(y, Number(e.target.value))}>
+        {MONTHS_EN.map((en, i) => <option key={i} value={i + 1}>{L(`${i + 1}月`, en)}</option>)}
+      </select>
+    </span>
+  );
+}
+
 /** これまで（成し遂げたこと）。直接書き足したものと、ありたい姿のうち実現したものが、新しい順に並ぶ */
 function PastLane({ goals, owner, act }: { goals: any[]; owner: boolean; act: (fn: () => Promise<unknown>) => Promise<void> }) {
   const items = goals
@@ -81,7 +101,7 @@ function PastLane({ goals, owner, act }: { goals: any[]; owner: boolean; act: (f
             {owner && (
               editing === g.id ? (
                 <span className="vb-past-edit">
-                  <input type="month" aria-label={L('実現した年月', 'Month achieved')} defaultValue={(g.achieved_at ?? '').slice(0, 7)} onBlur={(e) => e.target.value && act(() => patch(`/life/goals/${g.id}`, { achieved_at: `${e.target.value}-01` }))} />
+                  <YearMonth value={(g.achieved_at ?? todayJST()).slice(0, 7)} onChange={(v) => act(() => patch(`/life/goals/${g.id}`, { achieved_at: `${v}-01` }))} />
                   {(g.horizon ?? 10) !== 0 && <button className="btn btn-small btn-ghost" onClick={() => act(() => patch(`/life/goals/${g.id}`, { status: 'doing' }))}>{L('ボードに戻す', 'Back to board')}</button>}
                   <button className="btn btn-small btn-danger" onClick={() => act(() => del(`/life/goals/${g.id}`))}>{L('削除', 'Delete')}</button>
                   <button className="btn btn-small btn-ghost" onClick={() => setEditing(null)}>{L('閉じる', 'Close')}</button>
@@ -102,7 +122,7 @@ function PastLane({ goals, owner, act }: { goals: any[]; owner: boolean; act: (f
             if (f.title.trim()) act(() => post('/life/goals', { title: f.title, horizon: 0, achieved_at: `${f.achieved_at || todayJST().slice(0, 7)}-01` })).then(() => setF({ ...f, title: '' }));
           }}
         >
-          <input id="vb-new-past-when" type="month" aria-label={L('成し遂げた年月', 'Month achieved')} value={f.achieved_at} onChange={(e) => setF({ ...f, achieved_at: e.target.value })} />
+          <YearMonth idPrefix="vb-new-past" value={f.achieved_at} onChange={(v) => setF({ ...f, achieved_at: v })} />
           <input id="vb-new-past" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder={L('＋ 成し遂げたこと', '+ Achievement')} aria-label={L('成し遂げたことを追加', 'Add an achievement')} />
           {f.title.trim() && <button className="btn btn-small btn-primary">{L('追加', 'Add')}</button>}
         </form>

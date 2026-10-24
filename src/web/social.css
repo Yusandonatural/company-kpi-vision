@@ -518,6 +518,9 @@ a.flow-body:hover { color: var(--accent); }
 .vb-when { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
 .vb-done-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
 .vb-past-edit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vb-past-edit .vb-ym { flex: 1 1 100%; }
 .vb-past-edit input { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
 .vb-add-past { flex-wrap: wrap; }
-.vb-add-past input[type='month'] { flex: 1 1 100%; width: 100%; border-style: solid; }
+.vb-ym { display: flex; gap: 6px; flex: 1 1 100%; }
+.vb-ym select { flex: 1 1 0; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+.vb-add-past .vb-ym + input { flex: 1 1 100%; }

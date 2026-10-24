@@ -1,0 +1,43 @@
+name = "yusando-kpi-board"
+# Cloudflare のアカウント（秘密情報ではない）
+account_id = "f67f1a20dfa6ca21a2f21fb660aad45a"
+main = "src/worker/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# フロント（Vite のビルド結果）を同じ Worker から配信する
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/auth/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "yusando-kpi-board"
+# まだ作っていない。`npx wrangler d1 create yusando-kpi-board` で表示された ID に置き換える
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# 15分ごと: 期限切れタスクを「できなかった」に更新し、Notion と同期する
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+APP_TIMEZONE = "Asia/Tokyo"
+# 本番URL（Notion に書くリンクに使う）。空なら、実際に開かれた URL を覚えて使う
+APP_URL = ""
+# ログインできる人: ALLOWED_DOMAINS のドメインの全員と、ALLOWED_EMAILS に書いた人（どちらもカンマ区切り）
+ALLOWED_DOMAINS = "yusando.com"
+ALLOWED_EMAILS = ""
+# 最初のログインで「代表」になる人。ほかの人は「担当」で入り、役割と部署は代表が画面で決める
+OWNER_EMAILS = "isozaki@yusando.com"
+# Notion の Todo との同期（会社版では未設定。使うときに会社の Todo データベースの ID を入れる）
+NOTION_TASKS_DB_ID = ""
+NOTION_JOURNAL_TAG = "KPIボード"
+NOTION_ASSIGNEE = ""
+# 語学アプリとの連動は会社版では使わない
+FIREBASE_PROJECT_ID = ""
+
+# 秘密情報は `npx wrangler secret put <NAME>` で登録する:
+#   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / TOKEN_ENC_KEY / NOTION_TOKEN / FIREBASE_SERVICE_ACCOUNT

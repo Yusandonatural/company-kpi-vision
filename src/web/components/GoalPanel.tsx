@@ -110,7 +110,7 @@ export function MetricUpdate({ goal, onChange }: { goal: any; onChange: () => vo
   );
 }
 
-/** 日々の入力の上に常に表示する、今タームの目標（と人生のビジョン）の帯 */
+/** 日々の入力の上に常に表示する、今タームの目標（と会社のビジョン）の帯 */
 export function GoalStrip({ goals, termId, date, elapsedPct, vision, onChange, editable }: {
   goals: any[];
   termId?: string;
@@ -135,8 +135,8 @@ export function GoalStrip({ goals, termId, date, elapsedPct, vision, onChange, e
   return (
     <section className="goal-strip no-swipe" aria-label="今タームの目標">
       {vision?.trim() && (
-        <Link to="/life" className="gs-vision" title="人生の目標を見る">
-          <span className="gs-vision-label">人生</span>
+        <Link to="/life" className="gs-vision" title="会社のビジョンを見る">
+          <span className="gs-vision-label">ビジョン</span>
           <span className="gs-vision-text">{vision}</span>
         </Link>
       )}

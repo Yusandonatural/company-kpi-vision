@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { del, patch, post, put } from '../api';
 import { ErrorBox, Loading, SaveBadge } from '../components/ui';
 import { useApi, useAutosave } from '../hooks';
+import { AnnualKpis } from '../social/AnnualKpis';
 
-const CATEGORIES = ['仕事', '家族', '健康', '学び', '暮らし', 'お金', '心'];
+const CATEGORIES = ['事業', '商品', 'お客様', '海外', '組織', '地域', 'ブランド'];
 
 export function LifePage() {
   const { data, error, reload } = useApi<any>('/life');
+  const me = useApi<any>('/me');
   if (error) return <ErrorBox message={error} onRetry={reload} />;
-  if (!data) return <Loading />;
-  return <LifeView data={data} reload={reload} />;
+  if (!data || !me.data) return <Loading />;
+  return <LifeView data={data} reload={reload} owner={me.data.member?.role === 'owner'} />;
 }
 
-function LifeView({ data, reload }: { data: any; reload: () => void }) {
+function LifeView({ data, reload, owner }: { data: any; reload: () => void; owner: boolean }) {
   const [vision, setVision] = useState<string>(data.vision);
   const save = useAutosave((v: { vision: string }) => put('/life', v), 800, '/api/life', 'fj.draft.life');
   const active = data.goals.filter((g: any) => !g.achieved_at);
@@ -21,21 +23,23 @@ function LifeView({ data, reload }: { data: any; reload: () => void }) {
   return (
     <div className="page narrow-wide life-page">
       <header className="life-hero">
-        <p className="life-eyebrow">人生の目標</p>
-        <h1 className="page-title">どんな人生をやりきるか</h1>
-        <p className="muted">3ヶ月の目標は、ここに書いた人生の目標に近づくための一歩です。ビジョンは毎日のページの一番上に表示されます。</p>
+        <p className="life-eyebrow">ビジョン・10年の目標・年間の10倍KPI</p>
+        <h1 className="page-title">悠三堂はどこへ向かうか</h1>
+        <p className="muted">四半期の目標も、今日のやるべきことも、ここに書いたビジョンに近づくための一歩です。{owner ? '' : '書き換えられるのは代表だけです。'}</p>
       </header>
 
       <section className="card vision-card">
         <div className="card-head">
-          <h2 className="card-title">人生のビジョン</h2>
+          <h2 className="card-title">会社のビジョン</h2>
           <SaveBadge state={save.state} />
         </div>
         <textarea
           className="vision-input"
           rows={2}
           value={vision}
-          placeholder="例: 自然と共に生き、自然茶の豊かさを世界に届ける"
+          readOnly={!owner}
+          aria-label="会社のビジョン"
+          placeholder="例: 自然茶を、世界20か国の食卓へ。"
           onChange={(e) => {
             setVision(e.target.value);
             save.schedule({ vision: e.target.value });
@@ -43,20 +47,22 @@ function LifeView({ data, reload }: { data: any; reload: () => void }) {
         />
       </section>
 
+      <AnnualKpis owner={owner} />
+
       <section className="card">
-        <h2 className="card-title">人生の目標</h2>
-        {active.length === 0 && <p className="muted">まだありません。いつか必ずやりきりたいことを書いてみましょう。</p>}
+        <h2 className="card-title">10年の目標</h2>
+        {active.length === 0 && <p className="muted">まだありません。{owner ? '会社として必ずやりきりたいことを書いてみましょう。' : ''}</p>}
         <ul className="life-list">
           {active.map((g: any, i: number) => (
             <LifeGoalItem key={g.id} goal={g} first={i === 0} last={i === active.length - 1} onChange={reload} />
           ))}
         </ul>
-        <AddLifeGoal onAdded={reload} />
+        {owner && <AddLifeGoal onAdded={reload} />}
       </section>
 
       {achieved.length > 0 && (
         <section className="card">
-          <h2 className="card-title">達成した人生の目標 <span className="count">{achieved.length}</span></h2>
+          <h2 className="card-title">達成した目標 <span className="count">{achieved.length}</span></h2>
           <ul className="life-list">
             {achieved.map((g: any) => (
               <LifeGoalItem key={g.id} goal={g} first last onChange={reload} />
@@ -83,7 +89,7 @@ function AddLifeGoal({ onAdded }: { onAdded: () => void }) {
         <option value="">分野</option>
         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
       </select>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例: 自然茶を世界20か国に届ける" aria-label="新しい人生の目標" />
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例: 自然茶を世界20か国に届ける" aria-label="新しい10年の目標" />
       <button className="btn btn-primary" disabled={!title.trim()}>追加</button>
     </form>
   );
@@ -108,7 +114,7 @@ function LifeGoalItem({ goal, first, last, onChange }: { goal: any; first: boole
             value={f.title}
             onChange={(e) => setF({ ...f, title: e.target.value })}
             onBlur={() => f.title.trim() && f.title !== goal.title && save({ title: f.title })}
-            aria-label="人生の目標"
+            aria-label="10年の目標"
           />
           <div className="life-meta">
             {goal.category && <span className="chip chip-soft">{goal.category}</span>}

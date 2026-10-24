@@ -138,7 +138,7 @@ authRoutes.get('/auth/dev', async (c) => {
   if (c.env.DEV_LOGIN !== 'true' || !isLocal(c.req.url)) return c.notFound();
   const email = (c.req.query('email') || `${c.env.OWNER_EMAILS},${c.env.ALLOWED_EMAILS}`.split(',').map((s: string) => s.trim()).filter(Boolean)[0] || '').trim();
   if (!email || !allowed(c.env, email)) return c.text('許可されていないアカウントです', 403);
-  const user = await ensureUser(c.env, email, '開発ユーザー', null);
+  const user = await ensureUser(c.env, email, c.req.query('name') || email.split('@')[0], null);
   await startSession(c, user.id);
   return c.redirect('/');
 });

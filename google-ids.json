@@ -1,12 +1,14 @@
 {
-  "site_name": "目標達成ジャーナル",
-  "site_url": "https://journal.yusando.com",
-  "ga4_measurement_id": "G-9JG1FFTL1B",
+  "site_name": "悠三堂 KPI",
+  "site_url": "https://kpi.yusando.com",
+  "ga4_measurement_id": "",
   "ads_conversion_id": "",
   "ads_conversion_labels": {},
   "search_console_verification": "",
   "default_locale": "ja",
-  "locales": ["ja"],
-  "og_image": "https://journal.yusando.com/og.png",
+  "locales": [
+    "ja"
+  ],
+  "og_image": "https://kpi.yusando.com/og.png",
   "spa": false
 }

@@ -4,6 +4,7 @@ import { taskStats } from '../../shared/progress';
 import { all, one, ownGoal, ownTask, ownTerm, patch, run, uid } from '../db';
 import { HttpError, ORG, type AppEnv } from '../env';
 import { requireManager } from '../org';
+import { autoPost, retractAutoPost } from './social';
 import { byWeekday, fillRate, goalsWithProgress, groupByGoal, tasksInRange, termForDate, withInfo } from '../stats';
 import { markMissed } from '../tasks';
 import { LANG_SOURCES } from '../../shared/langs';
@@ -211,6 +212,10 @@ termRoutes.patch('/milestones/:id', async (c) => {
     f.done_at = b.done ? new Date().toISOString() : null;
   }
   await patch(c.env.DB, 'milestones', m.id, f, Object.keys(f));
+  if ('done' in b) {
+    if (b.done && !m.done) await autoPost(c.env.DB, c.get('user').id, 'milestone', m.id, `マイルストーン「${(f.title as string) ?? m.title}」を達成`, m.goal_id);
+    if (!b.done && m.done) await retractAutoPost(c.env.DB, 'milestone', m.id);
+  }
   return c.json({ ok: true });
 });
 

@@ -5,6 +5,9 @@ import { api } from './api';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
 import { DayPage } from './pages/DayPage';
+import { FeedPage } from './pages/FeedPage';
+import { OrgPage } from './pages/OrgPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { GoalsPage } from './pages/GoalsPage';
 import { LifePage } from './pages/LifePage';
 import { LockinPage } from './pages/LockinPage';
@@ -31,7 +34,7 @@ function NotFound() {
   return (
     <div className="page narrow">
       <h1 className="page-title">ページが見つかりません</h1>
-      <p><a href="/today">今日のページへ</a></p>
+      <p><a href="/home">ホームへ</a></p>
     </div>
   );
 }
@@ -40,7 +43,10 @@ export function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/today" replace />} />
+        <Route index element={<Navigate to="/home" replace />} />
+        <Route path="home" element={<FeedPage />} />
+        <Route path="people/:id" element={<ProfilePage />} />
+        <Route path="org" element={<OrgPage />} />
         <Route path="today" element={<Navigate to={`/day/${todayJST()}`} replace />} />
         <Route path="day/:date" element={<DayPage />} />
         <Route path="week" element={<Navigate to={`/week/${mondayOf(todayJST())}`} replace />} />

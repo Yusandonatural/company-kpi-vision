@@ -6,6 +6,7 @@ import { del, patch, post } from '../api';
 import { TermHeader } from '../components/TermHeader';
 import { ErrorBox, Loading, Progress, metricText } from '../components/ui';
 import { useApi } from '../hooks';
+import { HORIZONS } from '../social/VisionBoard';
 
 const WD = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -13,6 +14,7 @@ export function GoalsPage() {
   const { id = '' } = useParams();
   const { data: term, error, reload } = useApi<any>(`/terms/${id}`);
   const carriedIn = useApi<any[]>(`/terms/${id}/carried-in`);
+  const life = useApi<any>('/life');
   if (error) return <ErrorBox message={error} onRetry={reload} />;
   if (!term) return <Loading />;
   const projects = term.goals.filter((g: any) => g.type === 'project');
@@ -38,7 +40,7 @@ export function GoalsPage() {
       <section className="card">
         <h2 className="card-title">プロジェクト目標</h2>
         {projects.map((g: any, i: number) => (
-          <GoalEditor key={g.id} goal={g} first={i === 0} last={i === projects.length - 1} onChange={reload} />
+          <GoalEditor key={g.id} goal={g} first={i === 0} last={i === projects.length - 1} onChange={reload} visions={life.data?.goals ?? []} />
         ))}
         <AddGoal termId={term.id} type="project" onAdded={reload} />
       </section>
@@ -92,7 +94,7 @@ function AddGoal({ termId, type, onAdded }: { termId: string; type: 'project' | 
   );
 }
 
-function GoalEditor({ goal, first, last, onChange }: { goal: any; first: boolean; last: boolean; onChange: () => void }) {
+function GoalEditor({ goal, first, last, onChange, visions = [] }: { goal: any; first: boolean; last: boolean; onChange: () => void; visions?: any[] }) {
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({
     title: goal.title,
@@ -187,16 +189,20 @@ function GoalEditor({ goal, first, last, onChange }: { goal: any; first: boolean
               </div>
             </fieldset>
           )}
-          <label>
-            語学アプリと連動
-            <select value={goal.link_source ?? ''} onChange={(e) => save({ link_source: e.target.value || null })}>
-              <option value="">連動しない</option>
-              {Object.values(LANG_SOURCES).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
-            <span className="muted small">
-              {goal.type === 'habit' ? 'その語学アプリで学習した（XP が付いた）日に、自動で ✓ が付きます。' : 'その語学アプリでクリアした Day 数 ÷ 90 が進捗になります（マイルストーンや数値目標がない場合）。'}
-            </span>
-          </label>
+          {goal.type === 'project' && (
+            <label>
+              つながるビジョン（ありたい姿）
+              <select value={goal.vision_goal_id ?? ''} onChange={(e) => save({ vision_goal_id: e.target.value || null })}>
+                <option value="">つなげない</option>
+                {HORIZONS.map((h) => (
+                  <optgroup key={h.k} label={h.label}>
+                    {visions.filter((v) => (v.horizon ?? 10) === h.k && v.status !== 'done').map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <span className="muted small">ビジョンのページのボードで、このプロジェクトがそのありたい姿の下に並びます。</span>
+            </label>
+          )}
           <label>
             大きな障害（うまくいかなくなるとしたら何が原因か）
             <textarea rows={2} value={f.obstacle} onChange={(e) => setF({ ...f, obstacle: e.target.value })} onBlur={blurSave('obstacle')} />

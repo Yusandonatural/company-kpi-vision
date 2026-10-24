@@ -149,4 +149,18 @@ const mem = client();
 await mem('GET', '/auth/dev?email=member3@yusando.com');
 await mem('DELETE', `/api/improvements/${kz2.id}`, null, 403);
 ok(true, 'ほかの人が出した改善は担当には消せない');
+// ビジョンボード（1年後・3年後・10年後）とプロジェクトのつながり
+const vb = await boss('POST', '/api/life/goals', { title: '自然茶のカフェが地域の集まる場所になっている', horizon: 3 });
+ok(vb.horizon === 3 && vb.status === 'todo', 'ビジョンボードに3年後のありたい姿を足せる');
+await staff('POST', '/api/life/goals', { title: '担当は足せない', horizon: 1 }, 403);
+await boss('PATCH', `/api/life/goals/${vb.id}`, { status: 'doing' });
+await staff('PATCH', `/api/goals/${g2.id}`, { vision_goal_id: vb.id });
+let lifeNow = await staff('GET', '/api/life');
+const card = lifeNow.goals.find((x) => x.id === vb.id);
+ok(card.status === 'doing' && card.projects.some((p) => p.id === g2.id), 'プロジェクトをありたい姿につなげると、ボードの下に並ぶ');
+ok((await staff('GET', '/api/stories')).board.some((b) => b.id === vb.id), 'ストーリーズにボードのありたい姿');
+await boss('PATCH', `/api/life/goals/${vb.id}`, { status: 'done' });
+lifeNow = await boss('GET', '/api/life');
+ok(lifeNow.goals.find((x) => x.id === vb.id).achieved_at, '実現にすると達成日が入る');
+ok(!(await boss('GET', '/api/stories')).board.some((b) => b.id === vb.id), '実現したものはストーリーズから外れる');
 console.log('ALL OK');

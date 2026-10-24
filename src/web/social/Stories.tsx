@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon';
 const SIGNAL: Record<string, string> = { ok: '順調', warn: '注意', bad: '遅れ', none: '未入力' };
 const fmt = (n: number | null | undefined) => (n == null ? '—' : Number(n).toLocaleString('ja-JP', { maximumFractionDigits: 1 }));
 
-type Story = { key: string; kind: 'mission' | 'vision' | 'kpi' | 'person'; data: any };
+type Story = { key: string; kind: 'mission' | 'vision' | 'board' | 'kpi' | 'person'; data: any };
 
 /** 上のストーリーズ（会社のビジョン → 年間10倍KPI → メンバーの今日） */
 export function Stories({ s }: { s: any }) {
@@ -14,6 +14,7 @@ export function Stories({ s }: { s: any }) {
   const items: Story[] = [
     ...(s.mission ? [{ key: 'mission', kind: 'mission' as const, data: s }] : []),
     ...(s.vision ? [{ key: 'vision', kind: 'vision' as const, data: s }] : []),
+    ...(s.board ?? []).map((b: any) => ({ key: 'b' + b.id, kind: 'board' as const, data: b })),
     ...s.kpis.map((k: any) => ({ key: k.id, kind: 'kpi' as const, data: k })),
     ...s.people.map((p: any) => ({ key: p.id, kind: 'person' as const, data: p })),
   ];
@@ -28,6 +29,9 @@ export function Stories({ s }: { s: any }) {
             {it.kind === 'vision' && (
               <span className="story-ring vision"><span className="story-badge"><Icon name="vision" size={26} /></span></span>
             )}
+            {it.kind === 'board' && (
+              <span className="story-ring vision"><span className="story-badge story-yr">{it.data.horizon}年</span></span>
+            )}
             {it.kind === 'kpi' && (
               <RingProgress pct={it.data.pct} tone={it.data.signal} size={66}>
                 <span className="story-pct">{it.data.pct == null ? '—' : `${it.data.pct}%`}</span>
@@ -39,7 +43,7 @@ export function Stories({ s }: { s: any }) {
               </RingProgress>
             )}
             <span className="story-label">
-              {it.kind === 'mission' ? 'ミッション' : it.kind === 'vision' ? 'ビジョン' : it.kind === 'kpi' ? it.data.title : it.data.me ? 'あなた' : it.data.name || it.data.email}
+              {it.kind === 'mission' ? 'ミッション' : it.kind === 'vision' ? 'ビジョン' : it.kind === 'board' ? it.data.title : it.kind === 'kpi' ? it.data.title : it.data.me ? 'あなた' : it.data.name || it.data.email}
             </span>
           </button>
         ))}
@@ -84,6 +88,14 @@ function StoryViewer({ items, start, s, onClose }: { items: Story[]; start: numb
             <>
               <span className="sv-kicker">悠三堂のミッション</span>
               <p className="sv-vision">{s.mission}</p>
+            </>
+          )}
+          {it.kind === 'board' && (
+            <>
+              <span className="sv-kicker">{it.data.horizon}年後のありたい姿</span>
+              <p className="sv-vision">{it.data.title}</p>
+              {it.data.note && <p className="sv-num">{it.data.note}</p>}
+              <Link className="btn sv-cta" to="/life" onClick={onClose}>ビジョンボードを見る</Link>
             </>
           )}
           {it.kind === 'vision' && (

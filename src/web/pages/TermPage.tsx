@@ -73,6 +73,9 @@ export function TermPage() {
                 <span className="num">{g.progress}%</span>
               </div>
               <Progress value={g.progress} tone={g.behind ? 'warn' : undefined} />
+              {g.vision_goal_id && life.data?.goals?.find((v: any) => v.id === g.vision_goal_id) && (
+                <p className="small vb-link">→ ありたい姿：<Link to="/life">{life.data.goals.find((v: any) => v.id === g.vision_goal_id).title}</Link></p>
+              )}
               <p className="muted small">
                 {metricText(g) && <>数値目標 {metricText(g)} ・ </>}
                 マイルストーン {g.milestones.filter((m: any) => m.done).length} / {g.milestones.length}

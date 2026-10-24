@@ -64,11 +64,11 @@ termRoutes.post('/terms', async (c) => {
       c.env.DB,
       `INSERT INTO goals (id, term_id, type, title, why, sort_order, manual_progress, habit_frequency, habit_times_per_week, habit_weekdays_json,
          metric_unit, metric_start, metric_current, metric_target, obstacle, obstacle_plan, link_source,
-         owner_type, department_id, owner_user_id, annual_kpi_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         owner_type, department_id, owner_user_id, annual_kpi_id, vision_goal_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       nid, id, g.type, g.title, g.why, order++, g.manual_progress, g.habit_frequency, g.habit_times_per_week, g.habit_weekdays_json,
       g.metric_unit, g.metric_current ?? g.metric_start, g.metric_current ?? g.metric_start, g.metric_target, g.obstacle, g.obstacle_plan, g.link_source ?? null,
-      g.owner_type ?? 'company', g.department_id ?? null, g.owner_user_id ?? null, g.annual_kpi_id ?? null,
+      g.owner_type ?? 'company', g.department_id ?? null, g.owner_user_id ?? null, g.annual_kpi_id ?? null, g.vision_goal_id ?? null,
     );
     const ms = await all(c.env.DB, 'SELECT * FROM milestones WHERE goal_id = ? AND done = 0 ORDER BY sort_order', g.id);
     for (const [i, m] of ms.entries()) {
@@ -132,7 +132,7 @@ function goalFields(b: any) {
   }
   // 会社版: 誰の目標か、どの上の段（年間10倍KPI・上位の目標）につながるか
   if ('owner_type' in b && ['company', 'department', 'personal'].includes(b.owner_type)) f.owner_type = b.owner_type;
-  for (const k of ['department_id', 'owner_user_id', 'parent_goal_id', 'annual_kpi_id']) {
+  for (const k of ['department_id', 'owner_user_id', 'parent_goal_id', 'annual_kpi_id', 'vision_goal_id']) {
     if (k in b) f[k] = typeof b[k] === 'string' && b[k] ? b[k] : null;
   }
   if ('habit_weekdays' in b && Array.isArray(b.habit_weekdays)) f.habit_weekdays_json = JSON.stringify(b.habit_weekdays.filter((n: any) => Number.isInteger(n) && n >= 0 && n <= 6));

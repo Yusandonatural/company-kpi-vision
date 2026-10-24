@@ -11,6 +11,14 @@ export async function lifeSummary(db: D1Database, userId: string) {
   await run(db, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', userId);
   const s = await one(db, 'SELECT life_vision, mission FROM user_settings WHERE user_id = ?', userId);
   const goals = await all(db, 'SELECT * FROM life_goals WHERE user_id = ? ORDER BY achieved_at IS NOT NULL, sort_order, created_at', userId);
+  // ビジョンボード: それぞれのありたい姿につながるプロジェクト（新しいタームから）
+  const linked = await all(
+    db,
+    `SELECT g.id, g.title, g.status, g.vision_goal_id, t.id AS term_id, t.title AS term_title FROM goals g JOIN terms t ON t.id = g.term_id
+     WHERE t.user_id = ? AND g.vision_goal_id IS NOT NULL ORDER BY t.start_date DESC, g.sort_order`,
+    userId,
+  );
+  for (const v of goals) v.projects = linked.filter((p) => p.vision_goal_id === v.id).map(({ vision_goal_id: _v, ...p }) => p);
   return { mission: s?.mission ?? '', vision: s?.life_vision ?? '', goals };
 }
 
@@ -40,7 +48,8 @@ lifeRoutes.post('/life/goals', async (c) => {
   if (!title) throw new HttpError(400, '目標を入れてください');
   const max = await one(c.env.DB, 'SELECT COALESCE(MAX(sort_order), -1) AS m FROM life_goals WHERE user_id = ?', u.id);
   const id = uid();
-  await run(c.env.DB, 'INSERT INTO life_goals (id, user_id, title, category, sort_order) VALUES (?, ?, ?, ?, ?)', id, u.id, title, str(b.category, 40), (max?.m ?? -1) + 1);
+  const horizon = [1, 3, 10].includes(Number(b.horizon)) ? Number(b.horizon) : 10;
+  await run(c.env.DB, 'INSERT INTO life_goals (id, user_id, title, category, sort_order, horizon) VALUES (?, ?, ?, ?, ?, ?)', id, u.id, title, str(b.category, 40), (max?.m ?? -1) + 1, horizon);
   return c.json(await one(c.env.DB, 'SELECT * FROM life_goals WHERE id = ?', id));
 });
 
@@ -53,7 +62,15 @@ lifeRoutes.patch('/life/goals/:id', async (c) => {
   if ('note' in b) f.note = str(b.note, 2000);
   if ('category' in b) f.category = str(b.category, 40);
   if ('target_year' in b) f.target_year = Number.isInteger(Number(b.target_year)) && Number(b.target_year) > 1900 ? Number(b.target_year) : null;
-  if ('achieved' in b) f.achieved_at = b.achieved ? new Date().toISOString().slice(0, 10) : null;
+  if ('achieved' in b) {
+    f.achieved_at = b.achieved ? new Date().toISOString().slice(0, 10) : null;
+    f.status = b.achieved ? 'done' : 'todo';
+  }
+  if ('horizon' in b && [1, 3, 10].includes(Number(b.horizon))) f.horizon = Number(b.horizon);
+  if ('status' in b && ['todo', 'doing', 'done'].includes(b.status)) {
+    f.status = b.status;
+    f.achieved_at = b.status === 'done' ? (g.achieved_at ?? new Date().toISOString().slice(0, 10)) : null;
+  }
   const keys = Object.keys(f);
   if (keys.length) await run(c.env.DB, `UPDATE life_goals SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...keys.map((k) => f[k]), g.id);
   return c.json({ ok: true });

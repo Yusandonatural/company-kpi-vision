@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { mondayOf, shortDate, todayJST, weekday, weekdayName } from '../../shared/dates';
 import { termInfo } from '../../shared/progress';
-import { post, put } from '../api';
+import { put } from '../api';
 import { CalendarError, CalendarPicker, EventLine, EventModal, eventsOn, useEvents, type CalEvent } from '../components/calendar';
 import { ByGoalTable, DoneMissedLists, GoalProgressList, GoodsList, HabitWeekTable, PeriodStats, PlanEditor, ReviewForm, StatusChip, useNote } from '../components/period';
 import { ErrorBox, Loading, SaveBadge, SubTabs } from '../components/ui';
@@ -78,14 +78,6 @@ function WeekView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; re
                       <input type="checkbox" checked={t.done} onChange={(e) => update({ targets: note.targets.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)) }, true)} />
                       <span className={t.done ? 'done' : ''}>{t.text || L('（空欄）', '(blank)')}</span>
                     </label>
-                    {!t.done && t.text && (
-                      <ToKaizen
-                        target={t}
-                        projects={data.goals.filter((g: any) => g.type === 'project')}
-                        termId={data.term?.id}
-                        onSent={(id) => update({ targets: note.targets.map((x, j) => (j === i ? { ...x, kaizen_id: id } : x)) }, true)}
-                      />
-                    )}
                   </li>
                 ))}
               </ul>
@@ -109,55 +101,6 @@ function WeekView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; re
         </>
       )}
     </div>
-  );
-}
-
-/** 週間目標 → 改善ポイントへ: 未達の目標を、プロジェクトの改善（課題 → 打ち手）として出す */
-function ToKaizen({ target, projects, termId, onSent }: { target: { text: string; kaizen_id?: string }; projects: any[]; termId?: string; onSent: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ goal: projects[0]?.id ?? '', issue: L(`今週の目標「${target.text}」が未達`, `Missed this week’s goal: “${target.text}”`), action: '' });
-  const [err, setErr] = useState('');
-  if (target.kaizen_id) {
-    return (
-      <p className="to-kaizen-sent small">
-        {L('✓ 改善ポイントにしました', '✓ Added as a kaizen point')}
-        {termId && <> · <Link to={`/term/${termId}`}>{L('改善を見る', 'See kaizen')}</Link></>}
-      </p>
-    );
-  }
-  if (!open) {
-    return (
-      <button type="button" className="btn btn-small btn-ghost to-kaizen-btn" onClick={() => setOpen(true)}>
-        {L('→ 改善ポイントへ', '→ Make it a kaizen point')}
-      </button>
-    );
-  }
-  if (projects.length === 0) return <p className="muted small">{L('改善はプロジェクトに付けます。先にこのタームのプロジェクトを作ってください。', 'Kaizen points belong to a project. Create a project for this term first.')}</p>;
-  return (
-    <form
-      className="to-kaizen"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (!f.action.trim()) return;
-        try {
-          const imp = await post(`/goals/${f.goal}/improvements`, { issue: f.issue, action: f.action });
-          onSent(imp.id);
-        } catch (x: any) {
-          setErr(x.message);
-        }
-      }}
-    >
-      <select value={f.goal} onChange={(e) => setF({ ...f, goal: e.target.value })} aria-label={L('どのプロジェクトの改善か', 'Which project')}>
-        {projects.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
-      </select>
-      <input value={f.issue} onChange={(e) => setF({ ...f, issue: e.target.value })} aria-label={L('課題', 'Issue')} placeholder={L('課題（なぜできなかったか）', 'Issue (why it didn’t happen)')} />
-      <input value={f.action} onChange={(e) => setF({ ...f, action: e.target.value })} aria-label={L('打ち手', 'Action')} placeholder={L('打ち手（次に何を変えるか）', 'Action (what to change next)')} autoFocus />
-      <div className="row">
-        <button className="btn btn-small btn-primary" disabled={!f.action.trim()}>{L('改善ポイントにする', 'Add kaizen point')}</button>
-        <button type="button" className="btn btn-small btn-ghost" onClick={() => setOpen(false)}>{L('やめる', 'Cancel')}</button>
-      </div>
-      {err && <p className="error small">{err}</p>}
-    </form>
   );
 }
 

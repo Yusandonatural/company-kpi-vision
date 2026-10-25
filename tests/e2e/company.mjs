@@ -170,14 +170,4 @@ await boss('PATCH', `/api/life/goals/${past.id}`, { achieved_at: '2024-05-01' })
 const lifePast = await staff('GET', '/api/life');
 ok(lifePast.goals.find((x) => x.id === past.id).achieved_at === '2024-05-01', '成し遂げた年月を直せる');
 ok(!(await staff('GET', '/api/stories')).board.some((b) => b.id === past.id), '成し遂げたことはストーリーズの「ありたい姿」には出ない');
-
-// 週間目標 → 改善ポイントへ
-const wk = '2026-12-14';
-await boss('PUT', `/api/periods/week/${wk}`, { targets: [{ text: '新商品のLPを公開', done: false }] });
-const wv = await boss('GET', `/api/periods/week/${wk}`);
-const proj = wv.goals.find((x) => x.type === 'project');
-ok(proj, '週のページにプロジェクト（改善の付け先）が出る');
-const wimp = await boss('POST', `/api/goals/${proj.id}/improvements`, { issue: '今週の目標「新商品のLPを公開」が未達', action: '写真撮影を月曜に前倒し' });
-await boss('PUT', `/api/periods/week/${wk}`, { targets: [{ text: '新商品のLPを公開', done: false, kaizen_id: wimp.id }] });
-ok((await boss('GET', `/api/periods/week/${wk}`)).note.targets[0].kaizen_id === wimp.id, '未達の週間目標を改善ポイントにした印が残る');
 console.log('ALL OK');

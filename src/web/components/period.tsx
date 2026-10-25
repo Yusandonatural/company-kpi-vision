@@ -12,8 +12,7 @@ const unitEn = (u: string) => (u === '週' || u === 'week' ? 'week' : u === '月
 
 export interface Note {
   theme: string;
-  /** kaizen_id: 未達の目標を改善ポイントにしたとき、その改善の id */
-  targets: { text: string; done: boolean; kaizen_id?: string }[];
+  targets: { text: string; done: boolean }[];
   plan_memo: string;
   review_good: string;
   review_bad: string;

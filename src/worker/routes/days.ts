@@ -279,7 +279,7 @@ dayRoutes.get('/periods/:kind/:start', async (c) => {
           : range.filter((d) => habitScheduled(g, d)).length;
         habits.push({ id: g.id, title: g.title, done: range.filter((d) => logs.has(d)).length, target, days: range.map((d) => ({ date: d, done: logs.has(d), scheduled: habitScheduled(g, d) })) });
       } else {
-        goals.push({ id: g.id, type: g.type, title: g.title, progress: g.progress, behind: g.behind, status: g.status, termTitle: term.title });
+        goals.push({ id: g.id, title: g.title, progress: g.progress, behind: g.behind, status: g.status, termTitle: term.title });
       }
     }
   }
@@ -331,7 +331,7 @@ dayRoutes.on(['PUT', 'POST'], '/periods/:kind/:start', async (c) => {
     if (k in b) f[k] = str(b[k], 5000);
   }
   if ('targets' in b && Array.isArray(b.targets)) {
-    f.targets_json = JSON.stringify(b.targets.slice(0, 10).map((t: any) => ({ text: str(t?.text, 300), done: !!t?.done, ...(typeof t?.kaizen_id === 'string' && t.kaizen_id ? { kaizen_id: t.kaizen_id.slice(0, 64) } : {}) })));
+    f.targets_json = JSON.stringify(b.targets.slice(0, 10).map((t: any) => ({ text: str(t?.text, 300), done: !!t?.done })));
   }
   if ('review_score' in b) f.review_score = b.review_score == null ? null : Math.max(1, Math.min(5, Math.round(Number(b.review_score))));
   if ('reviewed' in b) f.reviewed = b.reviewed ? 1 : 0;

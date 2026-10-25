@@ -524,10 +524,3 @@ a.flow-body:hover { color: var(--accent); }
 .vb-ym { display: flex; gap: 6px; flex: 1 1 100%; }
 .vb-ym select { flex: 1 1 0; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
 .vb-add-past .vb-ym + input { flex: 1 1 100%; }
-
-/* 週間目標 → 改善ポイントへ */
-.to-kaizen-btn { margin: 4px 0 6px 28px; }
-.to-kaizen-sent { margin: 2px 0 6px 28px; color: var(--good, #1a7f37); }
-.to-kaizen { display: grid; gap: 6px; margin: 6px 0 10px 28px; padding: 10px; border-radius: 10px; background: var(--surface-2, rgba(127,127,127,.08)); }
-.to-kaizen input, .to-kaizen select { width: 100%; }
-.to-kaizen .row { display: flex; gap: 6px; }

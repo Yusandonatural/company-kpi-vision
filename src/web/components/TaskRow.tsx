@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { addDays, shortDate } from '../../shared/dates';
 import { TASK_STATUS_LABEL, type TaskStatus } from '../../shared/progress';
 import { del, patch, post } from '../api';
+import { isEn, L } from '../i18n';
 
 export interface Task {
   id: string;
@@ -42,39 +43,41 @@ export function TaskActions({ task, today, onChange }: { task: Task; today: stri
   const tomorrow = addDays(today, 1);
   return (
     <div className="task-actions" ref={ref}>
-      <button type="button" className="icon-btn" aria-label="操作" aria-expanded={open} onClick={() => setOpen(!open)}>⋯</button>
+      <button type="button" className="icon-btn" aria-label={L('操作', 'Actions')} aria-expanded={open} onClick={() => setOpen(!open)}>⋯</button>
       {open && (
         <div className="menu" role="menu">
           {canCarry && task.date < today && (
-            <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/carry`, { date: today }))}>今日に送る</button>
+            <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/carry`, { date: today }))}>{L('今日に送る', 'Move to today')}</button>
           )}
           {canCarry && (
             <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/carry`, { date: task.date >= today ? addDays(task.date, 1) : tomorrow }))}>
-              {task.date >= today ? '翌日へ送る' : `明日（${shortDate(tomorrow)}）に送る`}
+              {task.date >= today ? L('翌日へ送る', 'Move to next day') : L(`明日（${shortDate(tomorrow)}）に送る`, `Move to tomorrow (${shortDate(tomorrow)})`)}
             </button>
           )}
           {task.kind === 'might' && task.status === 'todo' && (
-            <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/promote`))}>やるべきことに上げる</button>
+            <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/promote`))}>{L('やるべきことに上げる', 'Promote to must-do')}</button>
           )}
           {task.kind !== 'might' && task.status === 'todo' && task.date >= today && (
-            <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/demote`))}>「時間があれば」に下げる</button>
+            <button role="menuitem" onClick={() => act(() => post(`/tasks/${task.id}/demote`))}>{L('「時間があれば」に下げる', 'Move to “if time allows”')}</button>
           )}
-          {task.status === 'done' && <button role="menuitem" onClick={() => act(() => patch(`/tasks/${task.id}`, { status: 'todo' }))}>未完了に戻す</button>}
+          {task.status === 'done' && <button role="menuitem" onClick={() => act(() => patch(`/tasks/${task.id}`, { status: 'todo' }))}>{L('未完了に戻す', 'Mark as not done')}</button>}
           {task.kind !== 'might' && task.status !== 'missed' && task.status !== 'done' && task.date < today && (
-            <button role="menuitem" onClick={() => act(() => patch(`/tasks/${task.id}`, { status: 'missed' }))}>できなかった</button>
+            <button role="menuitem" onClick={() => act(() => patch(`/tasks/${task.id}`, { status: 'missed' }))}>{L('できなかった', "Couldn't do it")}</button>
           )}
           {task.status !== 'dropped' && task.status !== 'carried' && (
-            <button role="menuitem" onClick={() => act(() => patch(`/tasks/${task.id}`, { status: 'dropped' }))}>取り下げ</button>
+            <button role="menuitem" onClick={() => act(() => patch(`/tasks/${task.id}`, { status: 'dropped' }))}>{L('取り下げ', 'Drop')}</button>
           )}
-          <button role="menuitem" className="danger" onClick={() => confirm('このタスクを削除しますか？（Notion の行もアーカイブされます）') && act(() => del(`/tasks/${task.id}`))}>削除</button>
+          <button role="menuitem" className="danger" onClick={() => confirm(L('このタスクを削除しますか？（Notion の行もアーカイブされます）', 'Delete this task? (The Notion row will be archived too.)')) && act(() => del(`/tasks/${task.id}`))}>{L('削除', 'Delete')}</button>
         </div>
       )}
     </div>
   );
 }
 
+const STATUS_EN: Record<TaskStatus, string> = { todo: 'To do', done: 'Done', missed: 'Missed', carried: 'Moved', dropped: 'Dropped' };
+
 export function StatusChip({ status }: { status: TaskStatus }) {
-  return <span className={`chip status-${status}`}>{TASK_STATUS_LABEL[status]}</span>;
+  return <span className={`chip status-${status}`}>{isEn ? STATUS_EN[status] : TASK_STATUS_LABEL[status]}</span>;
 }
 
 export function TaskRow({ task, today, goals, onChange }: { task: Task; today: string; goals: { id: string; title: string }[]; onChange: () => void }) {
@@ -107,7 +110,7 @@ export function TaskRow({ task, today, goals, onChange }: { task: Task; today: s
 
   return (
     <div className={`task-row status-${status}`} id={`task-${task.id}`}>
-      <input type="checkbox" className="task-check" checked={status === 'done'} onChange={toggle} disabled={inactive} aria-label="できた" />
+      <input type="checkbox" className="task-check" checked={status === 'done'} onChange={toggle} disabled={inactive} aria-label={L('できた', 'Done')} />
       <div className="task-main">
         <input
           className="task-title"
@@ -116,7 +119,7 @@ export function TaskRow({ task, today, goals, onChange }: { task: Task; today: s
           onBlur={saveTitle}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           disabled={inactive}
-          aria-label="やるべきこと"
+          aria-label={L('やるべきこと', 'Must-do')}
         />
         <div className="task-sub">
           <select
@@ -126,16 +129,16 @@ export function TaskRow({ task, today, goals, onChange }: { task: Task; today: s
               await patch(`/tasks/${task.id}`, { goal_id: e.target.value || null });
               onChange();
             }}
-            aria-label="紐づく目標"
+            aria-label={L('紐づく目標', 'Linked goal')}
           >
-            <option value="">目標なし</option>
+            <option value="">{L('目標なし', 'No goal')}</option>
             {goals.map((g) => (
               <option key={g.id} value={g.id}>{g.title}</option>
             ))}
           </select>
           {status !== 'todo' && status !== 'done' && <StatusChip status={status} />}
-          {task.carry_count > 0 && <span className="chip chip-soft">送った {task.carry_count}回</span>}
-          {task.notion_page_id && <span className="chip chip-soft" title={task.notion_error ?? 'Notion と同期'}>{task.notion_error ? 'Notion未同期' : 'Notion'}</span>}
+          {task.carry_count > 0 && <span className="chip chip-soft">{L(`送った ${task.carry_count}回`, `Moved ${task.carry_count}x`)}</span>}
+          {task.notion_page_id && <span className="chip chip-soft" title={task.notion_error ?? L('Notion と同期', 'Synced with Notion')}>{task.notion_error ? L('Notion未同期', 'Notion not synced') : 'Notion'}</span>}
         </div>
       </div>
       <TaskActions task={task} today={today} onChange={onChange} />
@@ -167,16 +170,16 @@ export function EmptyTaskSlot({ date, position, goals, onCreated }: { date: stri
       <div className="task-main">
         <input
           className="task-title"
-          placeholder={`やるべきこと ${position}`}
+          placeholder={`${L('やるべきこと', 'Must-do')} ${position}`}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && create()}
-          aria-label={`やるべきこと ${position}`}
+          aria-label={`${L('やるべきこと', 'Must-do')} ${position}`}
         />
         {title && goals.length > 0 && (
           <div className="task-sub">
-            <select className="goal-select" value={goal} onChange={(e) => setGoal(e.target.value)} aria-label="紐づく目標">
-              <option value="">目標なし</option>
+            <select className="goal-select" value={goal} onChange={(e) => setGoal(e.target.value)} aria-label={L('紐づく目標', 'Linked goal')}>
+              <option value="">{L('目標なし', 'No goal')}</option>
               {goals.map((g) => (
                 <option key={g.id} value={g.id}>{g.title}</option>
               ))}
@@ -216,8 +219,8 @@ export function MightList({ date, today, tasks, onChange }: { date: string; toda
       </ul>
       {shown.length < 10 && (
         <form className="add-row small" onSubmit={(e) => (e.preventDefault(), add())}>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="時間があればやること" aria-label="時間があればやること" />
-          <button className="btn btn-small" disabled={!title.trim() || busy}>追加</button>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={L('時間があればやること', 'If time allows')} aria-label={L('時間があればやること', 'If time allows')} />
+          <button className="btn btn-small" disabled={!title.trim() || busy}>{L('追加', 'Add')}</button>
         </form>
       )}
     </div>

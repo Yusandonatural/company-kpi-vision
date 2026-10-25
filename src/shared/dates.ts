@@ -3,6 +3,22 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const WEEKDAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+export const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** 画面側で英語表示にするときだけ切り替える（サーバーでは常に日本語） */
+let dateLang: 'ja' | 'en' = 'ja';
+export function setDateLang(l: 'ja' | 'en') {
+  dateLang = l;
+}
+export const isDateEn = () => dateLang === 'en';
+/** 曜日の短い名前 */
+export const weekdayName = (date: string) => (dateLang === 'en' ? WEEKDAYS_EN : WEEKDAYS_JA)[weekday(date)];
+/** 「2026年10月」/ "Oct 2026" */
+export function monthLabel(date: string): string {
+  const [y, m] = date.split('-').map(Number);
+  return dateLang === 'en' ? `${MONTHS_EN[m - 1]} ${y}` : `${y}年${m}月`;
+}
 
 function parse(date: string): number {
   const [y, m, d] = date.split('-').map(Number);
@@ -76,7 +92,7 @@ export function quarterOf(date: string): { start: string; end: string; title: st
 export function termTitle(start: string, end: string): string {
   const [y, m] = start.split('-').map(Number);
   const q = m % 3 === 1 ? ` Q${Math.floor((m - 1) / 3) + 1}` : '';
-  return `${y}${q}（${shortDate(start)}〜${shortDate(end)}）`;
+  return dateLang === 'en' ? `${y}${q} (${shortDate(start)}–${shortDate(end)})` : `${y}${q}（${shortDate(start)}〜${shortDate(end)}）`;
 }
 
 /** ターム作成時の既定: 今の四半期。ただし残り7日以内なら次の四半期 */
@@ -93,5 +109,6 @@ export function shortDate(date: string): string {
 
 export function longDate(date: string): string {
   const [y, m, d] = date.split('-').map(Number);
+  if (dateLang === 'en') return `${WEEKDAYS_EN[weekday(date)]}, ${MONTHS_EN[m - 1]} ${d}, ${y}`;
   return `${y}年${m}月${d}日（${WEEKDAYS_JA[weekday(date)]}）`;
 }

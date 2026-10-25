@@ -1,7 +1,37 @@
 /* ===== 会社版: Instagram / Facebook のような見た目 =====
    白地に細い線、丸いアバター、ストーリーズの輪、カードのタイムライン。
-   トークンは styles.css を上書きする（ジャーナル由来の画面もこの色で揃う） */
+   トークンは styles.css を上書きする（ジャーナル由来の画面もこの色で揃う）。
+   設定で「ジャーナルの形」を選ぶと、色と字はジャーナルのまま、部品だけこのファイルのものを使う */
 :root {
+  --ok: #31a24c;
+  --ok-soft: #e3f4e7;
+  --caution: #f0a500;
+  --bad: #e0245e;
+  --violet: #8a3ffc;
+  --violet-soft: #f1e9ff;
+  --ig: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%);
+  --nav-w: 244px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ok: #45bd62;
+    --ok-soft: #1f3a26;
+    --caution: #f2b53a;
+    --bad: #ff5c8a;
+    --violet: #b48cff;
+    --violet-soft: #33284a;
+  }
+}
+:root[data-theme='dark'] {
+  --ok: #45bd62;
+  --ok-soft: #1f3a26;
+  --caution: #f2b53a;
+  --bad: #ff5c8a;
+  --violet: #b48cff;
+  --violet-soft: #33284a;
+}
+/* 「ジャーナルの形」（data-ui="classic"）では、色と字はジャーナルのまま */
+:root:not([data-ui='classic']) {
   --bg: #f0f2f5;
   --surface: #ffffff;
   --surface-2: #f3f4f6;
@@ -18,22 +48,14 @@
   --good: #31a24c;
   --todo: #bcc0c4;
   --rule: #e4e6eb;
-  --ok: #31a24c;
-  --ok-soft: #e3f4e7;
-  --caution: #f0a500;
-  --bad: #e0245e;
-  --violet: #8a3ffc;
-  --violet-soft: #f1e9ff;
-  --ig: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   --shadow-lift: 0 8px 28px rgba(0, 0, 0, 0.16);
   --radius: 12px;
   --serif: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif;
   --sans: 'Zen Kaku Gothic New', -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic UI', system-ui, sans-serif;
-  --nav-w: 244px;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
+  :root:not([data-theme='light']):not([data-ui='classic']) {
     --bg: #18191a;
     --surface: #242526;
     --surface-2: #3a3b3c;
@@ -50,18 +72,12 @@
     --good: #45bd62;
     --todo: #5c5e60;
     --rule: #3e4042;
-    --ok: #45bd62;
-    --ok-soft: #1f3a26;
-    --caution: #f2b53a;
-    --bad: #ff5c8a;
-    --violet: #b48cff;
-    --violet-soft: #33284a;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-lift: 0 10px 30px rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
 }
-:root[data-theme='dark'] {
+:root[data-theme='dark']:not([data-ui='classic']) {
   --bg: #18191a;
   --surface: #242526;
   --surface-2: #3a3b3c;
@@ -78,18 +94,12 @@
   --good: #45bd62;
   --todo: #5c5e60;
   --rule: #3e4042;
-  --ok: #45bd62;
-  --ok-soft: #1f3a26;
-  --caution: #f2b53a;
-  --bad: #ff5c8a;
-  --violet: #b48cff;
-  --violet-soft: #33284a;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-lift: 0 10px 30px rgba(0, 0, 0, 0.6);
   color-scheme: dark;
 }
 body { background: var(--bg); }
-.page-title { font-family: var(--sans); font-weight: 700; letter-spacing: 0; }
+:root:not([data-ui='classic']) .page-title { font-family: var(--sans); font-weight: 700; letter-spacing: 0; }
 .icon { flex: none; display: block; }
 .link { background: none; border: 0; padding: 0; color: var(--muted); font: inherit; cursor: pointer; }
 .link:hover { text-decoration: underline; }
@@ -412,3 +422,105 @@ body { background: var(--bg); }
 .kpi-value { margin-left: 70px; }
 @media (max-width: 520px) { .kpi-value { margin-left: 0; } }
 .kpi-actions { justify-content: flex-start; }
+
+/* ===== 画面の形の切り替え（設定） ===== */
+.ui-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+@media (max-width: 600px) { .ui-mode { grid-template-columns: 1fr; } }
+.ui-mode-opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.ui-mode-opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.ui-mode-opt input { margin-top: 4px; accent-color: var(--accent); }
+.ui-mode-opt > span { display: flex; flex-direction: column; gap: 2px; }
+.ui-mode-opt small { color: var(--muted); line-height: 1.6; }
+
+/* ジャーナルの形: タブが増えたぶん詰める */
+.app.classic .tabs a { padding-inline: 14px; }
+@media (max-width: 960px) { .app.classic .tabs a { padding-inline: 10px; } }
+.app.classic .feed-layout { grid-template-columns: minmax(0, 600px) 300px; gap: 24px; }
+@media (max-width: 1100px) { .app.classic .feed-layout { grid-template-columns: minmax(0, 600px); } }
+
+/* ===== ミッション → ビジョン → 90日 → プロジェクト＋改善 ===== */
+.step-no { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; vertical-align: 2px; flex: none; }
+.flow-strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.flow-strip li { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 14px 18px; min-width: 0; }
+.flow-strip li + li { border-left: 1px solid var(--line); }
+.flow-strip li:not(.flow-end)::after { content: ''; position: absolute; right: -7px; top: 50%; width: 12px; height: 12px; background: var(--surface); border-top: 1px solid var(--line); border-right: 1px solid var(--line); transform: translateY(-50%) rotate(45deg); z-index: 1; }
+.flow-strip li:nth-child(4)::after { display: none; }
+.flow-label { display: flex; align-items: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.flow-strip .step-no { width: 20px; height: 20px; font-size: 11px; }
+.flow-body { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.5; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-decoration: none !important; }
+a.flow-body:hover { color: var(--accent); }
+.flow-end { justify-content: center; align-items: center; background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 700; white-space: nowrap; }
+@media (max-width: 960px) {
+  .flow-strip { grid-template-columns: 1fr; }
+  .flow-strip li + li { border-left: 0; border-top: 1px solid var(--line); }
+  .flow-strip li:not(.flow-end)::after { right: auto; left: 30px; top: auto; bottom: -7px; transform: rotate(135deg); }
+  .flow-end { white-space: normal; padding: 10px 16px !important; }
+}
+.mission-card .vision-input { font-size: 20px; }
+
+.kaizen { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); display: flex; flex-direction: column; gap: 8px; }
+.kaizen-head { display: flex; align-items: center; gap: 10px; }
+.kaizen-head .btn { margin-left: auto; }
+.kaizen-head .mini-title { margin: 0; }
+.kaizen-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kz { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.kz-status { padding: 3px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; }
+.kz-s-doing { background: var(--gold-soft); color: var(--gold); border-color: transparent; }
+.kz-s-done { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.kz-s-dropped { color: var(--muted); }
+.kz-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; }
+.kz-issue { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.kz-action { font-weight: 600; overflow-wrap: anywhere; }
+.kz-done .kz-action, .kz-dropped .kz-action { color: var(--muted); }
+.kz-dropped .kz-action { text-decoration: line-through; }
+.kz-result { margin-top: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 13px; }
+.kz-side { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.kz-late { color: var(--bad); font-size: 12px; font-weight: 700; }
+.kaizen-form { display: flex; flex-direction: column; gap: 8px; }
+.kaizen-form label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); }
+.kaizen-form input, .kaizen-form select { color: var(--ink); }
+.post-achieve.tone-kaizen { background: color-mix(in srgb, var(--caution) 16%, var(--surface)); }
+.tone-kaizen .pa-badge { color: var(--gold); }
+
+/* ===== ビジョンボード ===== */
+.vb-lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1100px) { .vb-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .vb-lanes { grid-template-columns: 1fr; } }
+.vb-lane { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.vb-lane-head { display: flex; justify-content: space-between; align-items: baseline; padding-top: 8px; border-top: 3px solid var(--accent); }
+.vb-lane-head h3 { margin: 0; font-size: 17px; font-weight: 800; }
+.vb-card { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); min-width: 0; }
+.vb-card h4 { margin: 0; font-family: var(--serif); font-size: 16px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+.vb-card.vb-done { opacity: .75; }
+.vb-card.vb-done h4 { text-decoration: line-through; text-decoration-color: var(--gold); }
+.vb-note { margin: 0; color: var(--muted); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vb-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vb-foot .btn { margin-left: auto; }
+.vb-status { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; }
+.vb-s-doing { background: var(--gold-soft); color: var(--gold); border-color: transparent; }
+.vb-s-done { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+.vb-projects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.vb-projects a { color: var(--accent); }
+.vb-edit { display: flex; flex-direction: column; gap: 8px; }
+.vb-add { display: flex; gap: 6px; }
+.vb-add input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; }
+.vb-add input:focus { border-style: solid; }
+.story-yr { font-size: 15px; font-weight: 800; }
+
+.vb-link { margin: 6px 0 0; color: var(--muted); }
+.vb-link a { color: var(--accent); font-weight: 700; }
+
+/* これまで（成し遂げたこと） */
+.vb-past .vb-lane-head { border-top-color: var(--gold); }
+.vb-timeline { list-style: none; margin: 0; padding: 0 0 0 14px; display: flex; flex-direction: column; gap: 10px; border-left: 2px solid var(--gold-soft); }
+.vb-timeline li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: start; }
+.vb-timeline li::before { content: ''; position: absolute; left: -21px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 3px var(--surface); }
+.vb-when { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.vb-done-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.vb-past-edit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vb-past-edit .vb-ym { flex: 1 1 100%; }
+.vb-past-edit input { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+.vb-add-past { flex-wrap: wrap; }
+.vb-ym { display: flex; gap: 6px; flex: 1 1 100%; }
+.vb-ym select { flex: 1 1 0; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
+.vb-add-past .vb-ym + input { flex: 1 1 100%; }

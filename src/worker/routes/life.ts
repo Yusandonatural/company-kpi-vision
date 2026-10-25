@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { all, one, run, uid } from '../db';
+import { isDate } from '../../shared/dates';
 import { HttpError, ORG, type AppEnv } from '../env';
 import { requireManager } from '../org';
 
@@ -9,9 +10,17 @@ const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0
 
 export async function lifeSummary(db: D1Database, userId: string) {
   await run(db, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', userId);
-  const s = await one(db, 'SELECT life_vision FROM user_settings WHERE user_id = ?', userId);
+  const s = await one(db, 'SELECT life_vision, mission FROM user_settings WHERE user_id = ?', userId);
   const goals = await all(db, 'SELECT * FROM life_goals WHERE user_id = ? ORDER BY achieved_at IS NOT NULL, sort_order, created_at', userId);
-  return { vision: s?.life_vision ?? '', goals };
+  // ビジョンボード: それぞれのありたい姿につながるプロジェクト（新しいタームから）
+  const linked = await all(
+    db,
+    `SELECT g.id, g.title, g.status, g.vision_goal_id, t.id AS term_id, t.title AS term_title FROM goals g JOIN terms t ON t.id = g.term_id
+     WHERE t.user_id = ? AND g.vision_goal_id IS NOT NULL ORDER BY t.start_date DESC, g.sort_order`,
+    userId,
+  );
+  for (const v of goals) v.projects = linked.filter((p) => p.vision_goal_id === v.id).map(({ vision_goal_id: _v, ...p }) => p);
+  return { mission: s?.mission ?? '', vision: s?.life_vision ?? '', goals };
 }
 
 async function ownLifeGoal(db: D1Database, userId: string, id: string) {
@@ -28,6 +37,7 @@ lifeRoutes.put('/life', async (c) => {
   const b = await c.req.json();
   await run(c.env.DB, 'INSERT OR IGNORE INTO user_settings (user_id) VALUES (?)', u.id);
   if ('vision' in b) await run(c.env.DB, 'UPDATE user_settings SET life_vision = ? WHERE user_id = ?', str(b.vision, 1000), u.id);
+  if ('mission' in b) await run(c.env.DB, 'UPDATE user_settings SET mission = ? WHERE user_id = ?', str(b.mission, 1000), u.id);
   return c.json({ ok: true, savedAt: new Date().toISOString() });
 });
 
@@ -39,7 +49,14 @@ lifeRoutes.post('/life/goals', async (c) => {
   if (!title) throw new HttpError(400, '目標を入れてください');
   const max = await one(c.env.DB, 'SELECT COALESCE(MAX(sort_order), -1) AS m FROM life_goals WHERE user_id = ?', u.id);
   const id = uid();
-  await run(c.env.DB, 'INSERT INTO life_goals (id, user_id, title, category, sort_order) VALUES (?, ?, ?, ?, ?)', id, u.id, title, str(b.category, 40), (max?.m ?? -1) + 1);
+  // horizon 0 =「これまで」（成し遂げたこと）。実現した日（achieved_at）を付けて入れる
+  const horizon = [0, 1, 3, 10].includes(Number(b.horizon)) ? Number(b.horizon) : 10;
+  const achieved = horizon === 0 ? (isDate(b.achieved_at) ? b.achieved_at : new Date().toISOString().slice(0, 10)) : null;
+  await run(
+    c.env.DB,
+    'INSERT INTO life_goals (id, user_id, title, category, sort_order, horizon, status, achieved_at, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    id, u.id, title, str(b.category, 40), (max?.m ?? -1) + 1, horizon, achieved ? 'done' : 'todo', achieved, str(b.note, 2000),
+  );
   return c.json(await one(c.env.DB, 'SELECT * FROM life_goals WHERE id = ?', id));
 });
 
@@ -52,7 +69,16 @@ lifeRoutes.patch('/life/goals/:id', async (c) => {
   if ('note' in b) f.note = str(b.note, 2000);
   if ('category' in b) f.category = str(b.category, 40);
   if ('target_year' in b) f.target_year = Number.isInteger(Number(b.target_year)) && Number(b.target_year) > 1900 ? Number(b.target_year) : null;
-  if ('achieved' in b) f.achieved_at = b.achieved ? new Date().toISOString().slice(0, 10) : null;
+  if ('achieved' in b) {
+    f.achieved_at = b.achieved ? new Date().toISOString().slice(0, 10) : null;
+    f.status = b.achieved ? 'done' : 'todo';
+  }
+  if ('horizon' in b && [0, 1, 3, 10].includes(Number(b.horizon))) f.horizon = Number(b.horizon);
+  if ('achieved_at' in b && isDate(b.achieved_at)) f.achieved_at = b.achieved_at;
+  if ('status' in b && ['todo', 'doing', 'done'].includes(b.status)) {
+    f.status = b.status;
+    f.achieved_at = b.status === 'done' ? ((f.achieved_at as string | undefined) ?? g.achieved_at ?? new Date().toISOString().slice(0, 10)) : null;
+  }
   const keys = Object.keys(f);
   if (keys.length) await run(c.env.DB, `UPDATE life_goals SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...keys.map((k) => f[k]), g.id);
   return c.json({ ok: true });

@@ -4,8 +4,9 @@ import { patch, post, del } from '../api';
 import { Avatar } from '../components/Avatar';
 import { ErrorBox, Loading } from '../components/ui';
 import { useApi } from '../hooks';
+import { L } from '../i18n';
 
-const ROLE: Record<string, string> = { owner: '代表', lead: '部署長', member: '担当' };
+const ROLE: Record<string, string> = { owner: L('代表', 'CEO'), lead: L('部署長', 'Dept. lead'), member: L('担当', 'Member') };
 
 /** メンバーと部署。役割と部署を変えられるのは代表だけ */
 export function OrgPage() {
@@ -26,12 +27,12 @@ export function OrgPage() {
     }
   };
   const byDept = (id: string | null) => members.filter((m: any) => (m.department_id ?? null) === id);
-  const groups = [...departments.map((d: any) => ({ id: d.id, name: d.name, lead: d.lead_user_id })), { id: null, name: '部署なし', lead: null }];
+  const groups = [...departments.map((d: any) => ({ id: d.id, name: d.name, lead: d.lead_user_id })), { id: null, name: L('部署なし', 'No department'), lead: null }];
 
   return (
     <div className="page narrow org">
-      <h1 className="page-title">メンバー</h1>
-      <p className="muted">@yusando.com のアカウントでログインした人がここに並びます。{owner ? '役割と部署はあなた（代表）が決めます。' : ''}</p>
+      <h1 className="page-title">{L('メンバー', 'Members')}</h1>
+      <p className="muted">{L('@yusando.com のアカウントでログインした人がここに並びます。', 'Everyone who signs in with an @yusando.com account appears here.')}{owner ? L('役割と部署はあなた（代表）が決めます。', ' You (the CEO) set roles and departments.') : ''}</p>
       {err && <p className="form-error">{err}</p>}
       {groups.map((g) => {
         const ms = byDept(g.id);
@@ -39,9 +40,9 @@ export function OrgPage() {
         return (
           <section key={g.id ?? 'none'} className="org-group">
             <h2>
-              {g.name} <span className="muted small">{ms.length}人</span>
+              {g.name} <span className="muted small">{L(`${ms.length}人`, `${ms.length}`)}</span>
               {owner && g.id && (
-                <button className="btn btn-small btn-ghost" onClick={() => act(() => del(`/org/departments/${g.id}`))}>部署を削除</button>
+                <button className="btn btn-small btn-ghost" onClick={() => act(() => del(`/org/departments/${g.id}`))}>{L('部署を削除', 'Delete department')}</button>
               )}
             </h2>
             <ul className="org-list">
@@ -56,16 +57,16 @@ export function OrgPage() {
                   </Link>
                   {owner ? (
                     <span className="org-controls">
-                      <select aria-label="役割" id={`role-${m.id}`} value={m.role} onChange={(e) => act(() => patch(`/org/members/${m.id}`, { role: e.target.value }))}>
+                      <select aria-label={L('役割', 'Role')} id={`role-${m.id}`} value={m.role} onChange={(e) => act(() => patch(`/org/members/${m.id}`, { role: e.target.value }))}>
                         {Object.entries(ROLE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select>
-                      <select aria-label="部署" id={`dept-${m.id}`} value={m.department_id ?? ''} onChange={(e) => act(() => patch(`/org/members/${m.id}`, { department_id: e.target.value || null }))}>
-                        <option value="">部署なし</option>
+                      <select aria-label={L('部署', 'Department')} id={`dept-${m.id}`} value={m.department_id ?? ''} onChange={(e) => act(() => patch(`/org/members/${m.id}`, { department_id: e.target.value || null }))}>
+                        <option value="">{L('部署なし', 'No department')}</option>
                         {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
                       </select>
                     </span>
                   ) : (
-                    <span className="chip">{ROLE[m.role]}{g.lead === m.id ? '（部署長）' : ''}</span>
+                    <span className="chip">{ROLE[m.role]}{g.lead === m.id ? L('（部署長）', ' (lead)') : ''}</span>
                   )}
                 </li>
               ))}
@@ -81,8 +82,8 @@ export function OrgPage() {
             if (name.trim()) act(() => post('/org/departments', { name })).then(() => setName(''));
           }}
         >
-          <input id="new-dept" placeholder="部署を追加（例：EC、卸、店舗）" value={name} onChange={(e) => setName(e.target.value)} />
-          <button className="btn" disabled={!name.trim()}>追加</button>
+          <input id="new-dept" placeholder={L('部署を追加（例：EC、卸、店舗）', 'Add a department (e.g. EC, Wholesale, Store)')} value={name} onChange={(e) => setName(e.target.value)} />
+          <button className="btn" disabled={!name.trim()}>{L('追加', 'Add')}</button>
         </form>
       )}
     </div>

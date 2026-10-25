@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 import { mondayOf, monthStart, todayJST } from '../shared/dates';
 import { api } from './api';
+import { homePath } from './uiMode';
 import { Layout } from './components/Layout';
 import { Loading } from './components/ui';
 import { DayPage } from './pages/DayPage';
@@ -18,6 +19,7 @@ import { TermPage } from './pages/TermPage';
 import { TermReviewPage } from './pages/TermReviewPage';
 import { TermsPage } from './pages/TermsPage';
 import { WeekPage } from './pages/WeekPage';
+import { L } from './i18n';
 
 /** /term?date=… → その日を含むタームへ */
 function CurrentTerm() {
@@ -33,8 +35,8 @@ function CurrentTerm() {
 function NotFound() {
   return (
     <div className="page narrow">
-      <h1 className="page-title">ページが見つかりません</h1>
-      <p><a href="/home">ホームへ</a></p>
+      <h1 className="page-title">{L('ページが見つかりません', 'Page not found')}</h1>
+      <p><a href={homePath()}>{L('最初の画面へ', 'Go to start')}</a></p>
     </div>
   );
 }
@@ -43,7 +45,7 @@ export function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/home" replace />} />
+        <Route index element={<Navigate to={homePath()} replace />} />
         <Route path="home" element={<FeedPage />} />
         <Route path="people/:id" element={<ProfilePage />} />
         <Route path="org" element={<OrgPage />} />

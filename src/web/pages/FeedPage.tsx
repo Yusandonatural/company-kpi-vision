@@ -5,11 +5,12 @@ import { Avatar, RingProgress } from '../components/Avatar';
 import { Icon } from '../components/Icon';
 import { ErrorBox, Loading } from '../components/ui';
 import { useApi } from '../hooks';
+import { L } from '../i18n';
 import { Composer } from '../social/Composer';
 import { PostCard } from '../social/PostCard';
 import { Stories } from '../social/Stories';
 
-const SIGNAL: Record<string, string> = { ok: '順調', warn: '注意', bad: '遅れ', none: '未入力' };
+const SIGNAL: Record<string, string> = { ok: L('順調', 'On track'), warn: L('注意', 'At risk'), bad: L('遅れ', 'Behind'), none: L('未入力', 'No data') };
 
 /** ホーム: ストーリーズ・投稿・タイムライン。広い画面では右に全社の信号 */
 export function FeedPage() {
@@ -64,7 +65,7 @@ export function FeedPage() {
 
         <button className="composer-open" onClick={() => setComposing(true)}>
           <Avatar name={user?.name} email={user?.email} src={user?.picture_url} size={40} />
-          <span>今日の手応えを共有しよう</span>
+          <span>{L('今日の手応えを共有しよう', 'Share how today went')}</span>
           <Icon name="plus" />
         </button>
 
@@ -73,9 +74,9 @@ export function FeedPage() {
         {posts && posts.length === 0 && (
           <div className="feed-empty">
             <Icon name="home" size={40} />
-            <h2>タイムラインはまだ空です</h2>
-            <p>今日の「やるべきこと」をできたにすると、ここに流れます。チームへの共有も投稿できます。</p>
-            <Link className="btn btn-primary" to="/today">今日のページへ</Link>
+            <h2>{L('タイムラインはまだ空です', 'The timeline is empty')}</h2>
+            <p>{L('今日の「やるべきこと」をできたにすると、ここに流れます。チームへの共有も投稿できます。', 'Mark today’s to-dos as done and they show up here. You can also post updates for the team.')}</p>
+            <Link className="btn btn-primary" to="/today">{L('今日のページへ', 'Go to Today')}</Link>
           </div>
         )}
         {posts?.map((p) => (
@@ -83,18 +84,18 @@ export function FeedPage() {
         ))}
         {next && (
           <button className="btn feed-more" disabled={more} onClick={loadMore}>
-            {more ? '読み込み中…' : 'もっと見る'}
+            {more ? L('読み込み中…', 'Loading…') : L('もっと見る', 'Show more')}
           </button>
         )}
       </div>
 
-      <aside className="feed-side" aria-label="全社の状況">
+      <aside className="feed-side" aria-label={L('全社の状況', 'Company status')}>
         {user && (
           <Link to={`/people/${user.id}`} className="side-me">
             <Avatar name={user.name} email={user.email} src={user.picture_url} size={48} />
             <span>
               <b>{user.name || user.email}</b>
-              <small>{mine ? `今日 ${mine.done}/${mine.total} できた` : '今日のページで3つ決めよう'}</small>
+              <small>{mine ? L(`今日 ${mine.done}/${mine.total} できた`, `Today ${mine.done}/${mine.total} done`) : L('今日のページで3つ決めよう', 'Pick 3 things on Today')}</small>
             </span>
           </Link>
         )}
@@ -106,15 +107,15 @@ export function FeedPage() {
                 <span className="story-pct">{s.term.info.elapsedPct}%</span>
               </RingProgress>
               <p>
-                {s.term.info.phase === 'active' ? <>Day <b>{s.term.info.dayNumber}</b> / {s.term.info.totalDays}</> : s.term.info.phase === 'upcoming' ? 'まだ始まっていません' : '終わりました'}
+                {s.term.info.phase === 'active' ? <>Day <b>{s.term.info.dayNumber}</b> / {s.term.info.totalDays}</> : s.term.info.phase === 'upcoming' ? L('まだ始まっていません', 'Not started yet') : L('終わりました', 'Finished')}
                 <br />
-                <Link to={`/term/${s.term.id}`}>今期の目標を見る</Link>
+                <Link to={`/term/${s.term.id}`}>{L('今期の目標を見る', 'See this term’s goals')}</Link>
               </p>
             </div>
           </section>
         )}
         <section className="side-card">
-          <h3>{s?.year ?? ''}年 10倍KPI</h3>
+          <h3>{L(`${s?.year ?? ''}年 10倍KPI`, `${s?.year ?? ''} 10x KPIs`)}</h3>
           {s?.kpis.length ? (
             <ul className="side-kpis">
               {s.kpis.map((k: any) => (
@@ -126,12 +127,12 @@ export function FeedPage() {
               ))}
             </ul>
           ) : (
-            <p className="muted small">まだ決まっていません。代表がビジョンのページで決めます。</p>
+            <p className="muted small">{L('まだ決まっていません。代表がビジョンのページで決めます。', 'Not set yet. The CEO sets them on the Vision page.')}</p>
           )}
         </section>
         {s && s.people.length > 1 && (
           <section className="side-card">
-            <h3>メンバーの今日</h3>
+            <h3>{L('メンバーの今日', 'Team today')}</h3>
             <ul className="side-people">
               {s.people.filter((p: any) => !p.me).slice(0, 8).map((p: any) => (
                 <li key={p.id}>

@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { shortDate, WEEKDAYS_JA, weekday } from '../../shared/dates';
+import { shortDate, weekdayName } from '../../shared/dates';
 import { put } from '../api';
 import { useAutosave } from '../hooks';
 import { StatusChip, TaskActions, type Task } from './TaskRow';
 import { Progress, SaveBadge, Stars, Stat, metricText, pct } from './ui';
+import { L } from '../i18n';
+
+/** 英語表示用の期間名（「週」「月」を受け取る） */
+const unitEn = (u: string) => (u === '週' || u === 'week' ? 'week' : u === '月' || u === 'month' ? 'month' : u);
 
 export interface Note {
   theme: string;
@@ -35,34 +39,34 @@ export function PlanEditor({ note, update, unit, prevNext }: { note: Note; updat
   const setTargets = (t: Note['targets'], now = false) => update({ targets: t }, now);
   return (
     <section className="card">
-      <h2 className="card-title">{unit}の予定</h2>
+      <h2 className="card-title">{L(`${unit}の予定`, `Plan for the ${unitEn(unit)}`)}</h2>
       {prevNext?.trim() && (
         <div className="notice soft">
-          <strong>前回のレビューで決めたこと</strong>
+          <strong>{L('前回のレビューで決めたこと', 'Decided at the last review')}</strong>
           <p className="pre">{prevNext}</p>
         </div>
       )}
       <label className="field">
-        <span>{unit}のテーマ</span>
-        <input className="big-input" value={note.theme} placeholder={`この${unit}、いちばん大事にすること`} onChange={(e) => update({ theme: e.target.value })} />
+        <span>{L(`${unit}のテーマ`, `Theme of the ${unitEn(unit)}`)}</span>
+        <input className="big-input" value={note.theme} placeholder={L(`この${unit}、いちばん大事にすること`, `What matters most this ${unitEn(unit)}`)} onChange={(e) => update({ theme: e.target.value })} />
       </label>
       <div className="field">
-        <span>{unit}の目標</span>
+        <span>{L(`${unit}の目標`, `Goals for the ${unitEn(unit)}`)}</span>
         <ul className="target-list">
           {targets.map((t, i) => (
             <li key={i}>
-              <input type="checkbox" checked={t.done} onChange={(e) => setTargets(targets.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)), true)} aria-label="達成" />
+              <input type="checkbox" checked={t.done} onChange={(e) => setTargets(targets.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)), true)} aria-label={L('達成', 'Done')} />
               <input value={t.text} onChange={(e) => setTargets(targets.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} className={t.done ? 'done' : ''} />
-              <button type="button" className="icon-btn" aria-label="削除" onClick={() => setTargets(targets.filter((_, j) => j !== i), true)}>×</button>
+              <button type="button" className="icon-btn" aria-label={L('削除', 'Delete')} onClick={() => setTargets(targets.filter((_, j) => j !== i), true)}>×</button>
             </li>
           ))}
         </ul>
         {targets.length < 10 && (
-          <button type="button" className="btn btn-small btn-ghost" onClick={() => setTargets([...targets, { text: '', done: false }])}>＋ 目標を追加</button>
+          <button type="button" className="btn btn-small btn-ghost" onClick={() => setTargets([...targets, { text: '', done: false }])}>{L('＋ 目標を追加', '+ Add goal')}</button>
         )}
       </div>
       <label className="field">
-        <span>メモ</span>
+        <span>{L('メモ', 'Notes')}</span>
         <textarea rows={3} value={note.plan_memo} onChange={(e) => update({ plan_memo: e.target.value })} />
       </label>
     </section>
@@ -71,15 +75,15 @@ export function PlanEditor({ note, update, unit, prevNext }: { note: Note; updat
 
 export function ReviewForm({ note, update, nextLabel, state }: { note: Note; update: (p: Partial<Note>, now?: boolean) => void; nextLabel: string; state: any }) {
   const fields: [keyof Note, string, string][] = [
-    ['review_good', '良かったこと・できたこと', ''],
-    ['review_bad', 'うまくいかなかったこと', ''],
-    ['review_learn', '学び・気づき', ''],
-    ['review_next', nextLabel, '次の予定のページに表示されます'],
+    ['review_good', L('良かったこと・できたこと', 'What went well'), ''],
+    ['review_bad', L('うまくいかなかったこと', 'What didn\'t go well'), ''],
+    ['review_learn', L('学び・気づき', 'Lessons & insights'), ''],
+    ['review_next', nextLabel, L('次の予定のページに表示されます', 'Shown on the next period\'s plan')],
   ];
   return (
     <section className="card">
       <div className="card-head">
-        <h2 className="card-title">ふりかえり</h2>
+        <h2 className="card-title">{L('ふりかえり', 'Review')}</h2>
         <SaveBadge state={state} />
       </div>
       {fields.map(([k, label, hint]) => (
@@ -89,11 +93,11 @@ export function ReviewForm({ note, update, nextLabel, state }: { note: Note; upd
         </label>
       ))}
       <div className="field">
-        <span>自己評価</span>
+        <span>{L('自己評価', 'Self-rating')}</span>
         <Stars value={note.review_score} onChange={(v) => update({ review_score: v }, true)} />
       </div>
       <button className={`btn ${note.reviewed ? 'btn-done' : 'btn-primary'}`} onClick={() => update({ reviewed: !note.reviewed }, true)}>
-        {note.reviewed ? '✓ レビュー完了' : 'レビューを完了する'}
+        {note.reviewed ? L('✓ レビュー完了', '✓ Review done') : L('レビューを完了する', 'Finish review')}
       </button>
     </section>
   );
@@ -106,10 +110,10 @@ export function PeriodStats({ data, unit }: { data: any; unit: string }) {
   const habitTarget = data.habits.reduce((a: number, h: any) => a + h.target, 0);
   return (
     <div className="stats">
-      <Stat label="タスク達成率" value={pct(s.rate)} sub={diff == null ? `前${unit}の記録なし` : `前${unit}比 ${diff >= 0 ? '+' : ''}${diff}pt`} tone={diff != null && diff < 0 ? 'warn' : undefined} />
-      <Stat label="できた／できなかった" value={`${s.done} / ${s.missed + s.carried}`} sub={`未着手 ${s.todo}`} />
-      <Stat label="習慣" value={habitTarget ? `${Math.round((habitDone / habitTarget) * 100)}%` : '—'} sub={`${habitDone} / ${habitTarget}回`} />
-      <Stat label="記入した日" value={data.fill.days ? `${data.fill.filled} / ${data.fill.days}日` : '—'} sub={pct(data.fill.pct)} />
+      <Stat label={L('タスク達成率', 'Task completion')} value={pct(s.rate)} sub={diff == null ? L(`前${unit}の記録なし`, `No record last ${unitEn(unit)}`) : L(`前${unit}比 ${diff >= 0 ? '+' : ''}${diff}pt`, `${diff >= 0 ? '+' : ''}${diff}pt vs last ${unitEn(unit)}`)} tone={diff != null && diff < 0 ? 'warn' : undefined} />
+      <Stat label={L('できた／できなかった', 'Done / missed')} value={`${s.done} / ${s.missed + s.carried}`} sub={L(`未着手 ${s.todo}`, `Not started ${s.todo}`)} />
+      <Stat label={L('習慣', 'Habits')} value={habitTarget ? `${Math.round((habitDone / habitTarget) * 100)}%` : '—'} sub={L(`${habitDone} / ${habitTarget}回`, `${habitDone} / ${habitTarget} times`)} />
+      <Stat label={L('記入した日', 'Days logged')} value={data.fill.days ? L(`${data.fill.filled} / ${data.fill.days}日`, `${data.fill.filled} / ${data.fill.days} days`) : '—'} sub={pct(data.fill.pct)} />
     </div>
   );
 }
@@ -122,11 +126,11 @@ export function HabitWeekTable({ habits, onToggle }: { habits: any[]; onToggle?:
       <table className="habit-table">
         <thead>
           <tr>
-            <th>習慣</th>
+            <th>{L('習慣', 'Habits')}</th>
             {dates.map((d: string) => (
-              <th key={d}>{WEEKDAYS_JA[weekday(d)]}<br /><span className="muted small">{shortDate(d)}</span></th>
+              <th key={d}>{weekdayName(d)}<br /><span className="muted small">{shortDate(d)}</span></th>
             ))}
-            <th>達成</th>
+            <th>{L('達成', 'Done')}</th>
           </tr>
         </thead>
         <tbody>
@@ -155,11 +159,11 @@ export function HabitWeekTable({ habits, onToggle }: { habits: any[]; onToggle?:
 }
 
 export function ByGoalTable({ rows }: { rows: any[] }) {
-  if (rows.length === 0) return <p className="muted">タスクはまだありません</p>;
+  if (rows.length === 0) return <p className="muted">{L('タスクはまだありません', 'No tasks yet')}</p>;
   return (
     <table className="simple-table">
       <thead>
-        <tr><th>目標</th><th>できた</th><th>できなかった</th><th>達成率</th></tr>
+        <tr><th>{L('目標', 'Goal')}</th><th>{L('できた', 'Done')}</th><th>{L('できなかった', 'Missed')}</th><th>{L('達成率', 'Rate')}</th></tr>
       </thead>
       <tbody>
         {rows.map((g) => (
@@ -176,7 +180,7 @@ export function ByGoalTable({ rows }: { rows: any[] }) {
 }
 
 export function GoalProgressList({ goals }: { goals: any[] }) {
-  if (goals.length === 0) return <p className="muted">プロジェクト目標はまだありません</p>;
+  if (goals.length === 0) return <p className="muted">{L('プロジェクト目標はまだありません', 'No project goals yet')}</p>;
   return (
     <ul className="goal-progress">
       {goals.map((g) => (
@@ -196,24 +200,24 @@ export function DoneMissedLists({ days, today, onChange }: { days: any[]; today:
   return (
     <div className="two-col">
       <section className="card">
-        <h2 className="card-title">できたこと <span className="count">{done.length}</span></h2>
+        <h2 className="card-title">{L('できたこと', 'Done')} <span className="count">{done.length}</span></h2>
         <ul className="plain-list">
           {done.map((t) => (
             <li key={t.id}><Link to={`/day/${t.date}`} className="muted small">{shortDate(t.date)}</Link> {t.title}</li>
           ))}
-          {done.length === 0 && <li className="muted">まだありません</li>}
+          {done.length === 0 && <li className="muted">{L('まだありません', 'None yet')}</li>}
         </ul>
       </section>
       <section className="card">
-        <h2 className="card-title">できなかったこと <span className="count">{missed.length}</span></h2>
+        <h2 className="card-title">{L('できなかったこと', 'Missed')} <span className="count">{missed.length}</span></h2>
         <ul className="plain-list">
           {missed.map((t) => (
             <li key={t.id} className="with-actions">
-              <span><Link to={`/day/${t.date}`} className="muted small">{shortDate(t.date)}</Link> {t.title} {t.carry_count > 0 && <span className="chip chip-soft">送った {t.carry_count}回</span>}</span>
+              <span><Link to={`/day/${t.date}`} className="muted small">{shortDate(t.date)}</Link> {t.title} {t.carry_count > 0 && <span className="chip chip-soft">{L(`送った ${t.carry_count}回`, `Carried ${t.carry_count}×`)}</span>}</span>
               <TaskActions task={t} today={today} onChange={onChange} />
             </li>
           ))}
-          {missed.length === 0 && <li className="muted">ありません</li>}
+          {missed.length === 0 && <li className="muted">{L('ありません', 'None')}</li>}
         </ul>
       </section>
     </div>
@@ -224,12 +228,12 @@ export function GoodsList({ days }: { days: any[] }) {
   const goods = days.flatMap((d) => d.goods.map((g: string) => ({ date: d.date, text: g })));
   return (
     <section className="card">
-      <h2 className="card-title">良かったこと <span className="count">{goods.length}</span></h2>
+      <h2 className="card-title">{L('良かったこと', 'What went well')} <span className="count">{goods.length}</span></h2>
       <ul className="plain-list">
         {goods.map((g, i) => (
           <li key={i}><Link to={`/day/${g.date}`} className="muted small">{shortDate(g.date)}</Link> {g.text}</li>
         ))}
-        {goods.length === 0 && <li className="muted">まだありません</li>}
+        {goods.length === 0 && <li className="muted">{L('まだありません', 'None yet')}</li>}
       </ul>
     </section>
   );

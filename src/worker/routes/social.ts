@@ -9,7 +9,7 @@ import { termForDate, withInfo } from '../stats';
 export const socialRoutes = new Hono<AppEnv>();
 
 const str = (v: unknown, max = 2000) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-type AutoKind = 'task_done' | 'milestone' | 'kpi' | 'review';
+type AutoKind = 'task_done' | 'milestone' | 'kpi' | 'review' | 'improvement';
 
 /** 自動の投稿。同じもと（kind + ref_id）からは1回だけ。本人が「流さない」にしていれば何もしない */
 export async function autoPost(db: D1Database, userId: string, kind: AutoKind, refId: string, body: string, goalId: string | null = null) {
@@ -140,7 +140,8 @@ socialRoutes.get('/stories', async (c) => {
   const u = c.get('user');
   const today = todayJST();
   const year = Number(today.slice(0, 4));
-  const vision = await one(c.env.DB, 'SELECT life_vision FROM user_settings WHERE user_id = ?', ORG);
+  const vision = await one(c.env.DB, 'SELECT life_vision, mission FROM user_settings WHERE user_id = ?', ORG);
+  const board = await all(c.env.DB, "SELECT id, title, note, horizon, status FROM life_goals WHERE user_id = ? AND status <> 'done' ORDER BY horizon, sort_order, created_at", ORG);
   const elapsed = yearElapsedPct(year, today);
   const kpis = (await all(c.env.DB, 'SELECT * FROM annual_kpis WHERE year = ? ORDER BY sort_order, created_at', year)).map((k) => ({
     ...k,
@@ -162,7 +163,7 @@ socialRoutes.get('/stories', async (c) => {
     })
     // 自分を先頭に、そのあとは今日のタスクがある人から
     .sort((a, b) => Number(b.me) - Number(a.me) || b.total - a.total || b.done - a.done);
-  return c.json({ today, vision: vision?.life_vision ?? '', year, elapsedPct: elapsed, kpis, people: shaped, term: withInfo(term) });
+  return c.json({ today, mission: vision?.mission ?? '', vision: vision?.life_vision ?? '', board, year, elapsedPct: elapsed, kpis, people: shaped, term: withInfo(term) });
 });
 
 /** メンバーのプロフィール */

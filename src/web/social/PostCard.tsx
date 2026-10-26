@@ -10,7 +10,7 @@ const KIND: Record<string, { label: string; icon: string; tone: string }> = {
   milestone: { label: L('マイルストーン達成', 'Milestone reached'), icon: 'flag', tone: 'gold' },
   kpi: { label: L('KPIを更新', 'KPI updated'), icon: 'chart', tone: 'blue' },
   review: { label: L('ふりかえり', 'Review'), icon: 'book', tone: 'violet' },
-  improvement: { label: L('改善を完了', 'Kaizen done'), icon: 'check', tone: 'kaizen' },
+  improvement: { label: L('改善ポイントを修正', 'Kaizen fixed'), icon: 'check', tone: 'kaizen' },
 };
 
 const ROLE: Record<string, string> = { owner: L('代表', 'CEO'), lead: L('部署長', 'Dept. lead'), member: '' };
@@ -153,5 +153,90 @@ export function PostCard({ p, meId, isOwner, onDeleted }: { p: any; meId?: strin
         </div>
       )}
     </article>
+  );
+}
+
+/** 同じ人の同じ日の「できた」が続いたら1枚にまとめる（タイムラインが「できた」で埋まらないように） */
+export function groupDone(posts: any[]): (any | { group: any[] })[] {
+  const day = (s: string) => new Date(Date.parse(s.replace(' ', 'T') + (s.endsWith('Z') ? '' : 'Z')) + 9 * 3600e3).toISOString().slice(0, 10);
+  const out: (any | { group: any[] })[] = [];
+  for (const p of posts) {
+    const last = out[out.length - 1];
+    const head = last && ('group' in last ? last.group[0] : last);
+    if (p.kind === 'task_done' && head?.kind === 'task_done' && head.user_id === p.user_id && day(head.created_at) === day(p.created_at)) {
+      if ('group' in last) last.group.push(p);
+      else out[out.length - 1] = { group: [last, p] };
+    } else out.push(p);
+  }
+  return out;
+}
+
+export function DoneGroup({ posts, meId, isOwner, onDeleted }: { posts: any[]; meId?: string; isOwner?: boolean; onDeleted?: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const p = posts[0];
+  const name = p.user_name || p.user_email;
+  if (open) {
+    return (
+      <div className="done-group-open">
+        {posts.map((x) => <PostCard key={x.id} p={x} meId={meId} isOwner={isOwner} onDeleted={() => onDeleted?.(x.id)} />)}
+        <button className="btn btn-small btn-ghost done-group-fold" onClick={() => setOpen(false)}>{L('まとめて表示', 'Show as one')}</button>
+      </div>
+    );
+  }
+  return (
+    <article className="post" aria-label={L(`${name}の「できた」${posts.length}件`, `${posts.length} done by ${name}`)}>
+      <header className="post-head">
+        <Link to={`/people/${p.user_id}`} className="post-who">
+          <Avatar name={p.user_name} email={p.user_email} src={p.user_picture} size={40} />
+          <span className="post-names">
+            <b>{name}</b>
+            <span className="post-meta">
+              {[ROLE[p.user_role], p.department_name].filter(Boolean).join(L('・', ' · '))}
+              {(ROLE[p.user_role] || p.department_name) && ' · '}
+              <time dateTime={p.created_at}>{timeAgo(p.created_at)}</time>
+            </span>
+          </span>
+        </Link>
+      </header>
+      <div className="post-achieve tone-ok">
+        <span className="pa-badge"><Icon name="check" size={18} /> {L(`できた ${posts.length}件`, `Done · ${posts.length}`)}</span>
+        <ul className="done-list">
+          {posts.map((x) => <DoneRow key={x.id} p={x} />)}
+        </ul>
+      </div>
+      <div className="post-actions">
+        <button className="pa-btn" onClick={() => setOpen(true)}>
+          <Icon name="comment" /> <span>{L('1件ずつ見る・コメント', 'Open each · Comment')}</span>
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function DoneRow({ p }: { p: any }) {
+  const [liked, setLiked] = useState<boolean>(p.liked);
+  const [likes, setLikes] = useState<number>(p.like_count);
+  const like = async () => {
+    const on = !liked;
+    setLiked(on);
+    setLikes((n) => n + (on ? 1 : -1));
+    try {
+      setLikes((await put(`/posts/${p.id}/like`, { on })).like_count);
+    } catch {
+      setLiked(!on);
+      setLikes((n) => n + (on ? -1 : 1));
+    }
+  };
+  const title = String(p.body ?? '').split('\n')[0];
+  return (
+    <li>
+      <span className="done-title">
+        <b>{title}</b>
+        {p.goal_title && <span className="pa-goal"><Icon name="target" size={14} /> {p.goal_title}</span>}
+      </span>
+      <button className={`done-like ${liked ? 'liked' : ''}`} aria-pressed={liked} aria-label={L(`「${title}」にいいね`, `Like “${title}”`)} onClick={like}>
+        <Icon name="heart" filled={liked} size={18} />{likes > 0 && <span>{likes}</span>}
+      </button>
+    </li>
   );
 }

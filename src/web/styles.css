@@ -224,6 +224,9 @@ h1, h2, h3 { margin: 0; line-height: 1.4; }
 .day-meta strong { color: var(--gold); font-family: var(--serif); font-size: 15px; }
 .day-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 .day-aside { order: 2; position: sticky; top: 72px; overflow-y: auto; }
+/* カレンダー未接続のときは右の列を出さない（案内は今日のスケジュールに1回だけ） */
+.day-grid.no-aside { grid-template-columns: minmax(0, 1fr); max-width: 760px; margin-inline: auto; }
+.day-grid.no-aside > .day-aside { display: none; }
 .day-main { order: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 @media (max-width: 960px) {
   .day-grid { grid-template-columns: 1fr; }
@@ -328,7 +331,8 @@ h1, h2, h3 { margin: 0; line-height: 1.4; }
 .simple-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .simple-table th, .simple-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
 .simple-table th { font-size: 12px; color: var(--muted); font-weight: 600; }
-.simple-table td.num { text-align: right; }
+.simple-table td.num, .simple-table th.num { text-align: right; white-space: nowrap; }
+@media (max-width: 600px) { .simple-table th, .simple-table td { padding: 6px 4px; } .simple-table th.num { font-size: 11px; } }
 .stars { display: inline-flex; gap: 2px; }
 .stars button { border: 0; background: none; font-size: 26px; color: var(--line); padding: 0 2px; line-height: 1; }
 .stars button.on { color: var(--gold); }
@@ -407,6 +411,12 @@ h1, h2, h3 { margin: 0; line-height: 1.4; }
 .goal-editor-head { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
 .goal-title-input { font-weight: 700; font-size: 16px; border-color: transparent; background: transparent; }
 .goal-title-input:hover { border-color: var(--line); }
+/* スマホでは目標名を1行まるごと使って、% と並べ替え・詳細はその下に */
+@media (max-width: 600px) {
+  .goal-editor-head { flex-wrap: wrap; }
+  .goal-editor-head .goal-title-input { flex: 1 1 100%; min-width: 0; }
+  .goal-editor-head .num { margin-right: auto; }
+}
 .goal-editor .check-list { margin: 8px 0 0 4px; }
 .add-row { display: flex; gap: 8px; margin-top: 12px; }
 .add-row.small { margin-top: 4px; }

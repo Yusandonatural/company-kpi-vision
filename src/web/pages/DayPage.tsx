@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { addDays, longDate, mondayOf } from '../../shared/dates';
 import { put } from '../api';
 import { CalendarError, CalendarPicker, DayTimeline, EventLine, EventModal, eventsOn, useEvents, type CalEvent } from '../components/calendar';
-import { GoalPanel, GoalStrip } from '../components/GoalPanel';
+import { GoalStrip } from '../components/GoalPanel';
 import { LockinCard } from '../components/LockinCard';
 import { NotionPicker } from '../components/NotionPicker';
 import { EmptyTaskSlot, MightList, TaskRow, type Task } from '../components/TaskRow';
@@ -19,7 +19,6 @@ export function DayPage() {
 function DayView({ date }: { date: string }) {
   const nav = useNavigate();
   const { data, error, reload, setData } = useApi<any>(`/days/${date}`);
-  const [goalsOpen, setGoalsOpen] = useLocalFlag('fj.goalsOpen', true);
   const [picker, setPicker] = useState(false);
   const [form, setForm] = useState<{ focus: string; memo: string; goods: string[]; progress_metric: string } | null>(null);
   const save = useAutosave((v: any) => put(`/days/${date}`, v), 1000, `/api/days/${date}`, `fj.draft.day.${date}`);
@@ -104,9 +103,9 @@ function DayView({ date }: { date: string }) {
         <SaveBadge state={save.state} />
       </div>
 
-      <div className="day-grid">
+      <div className={`day-grid ${cal.error ? 'no-aside' : ''}`}>
         <aside className="day-aside">
-          <section className="card timeline-card desktop-only no-swipe">
+          {!cal.error && <section className="card timeline-card desktop-only no-swipe">
             <div className="card-head">
               <h2 className="card-title">{L('1日の予定', 'Day schedule')}</h2>
               <span className="row">
@@ -114,17 +113,10 @@ function DayView({ date }: { date: string }) {
                 <button className="btn btn-small" onClick={() => setEditEvent({ date })}>＋ {L('追加', 'Add')}</button>
               </span>
             </div>
-            {cal.error ? <CalendarError message={cal.error} /> : cal.data ? (
+            {cal.data ? (
               <DayTimeline date={date} today={today} events={cal.data} onEdit={(e) => setEditEvent({ event: e, date })} onCreate={(time) => setEditEvent({ date, time })} />
             ) : <p className="muted small">{L('読み込み中…', 'Loading…')}</p>}
-          </section>
-          <details className="card goals-card desktop-only" open={goalsOpen} onToggle={(e) => setGoalsOpen((e.target as HTMLDetailsElement).open)}>
-            <summary>
-              <span className="card-title">{L('今タームの目標', 'Goals this term')}</span>
-              {info && <span className="muted small">{L('経過', 'Elapsed')} {info.elapsedPct}%</span>}
-            </summary>
-            <GoalPanel goals={data.goals} termId={term?.id} date={date} onChange={() => { setData({ ...data }); reload(); }} editable={!!term?.inTerm} />
-          </details>
+          </section>}
         </aside>
 
         <div className="day-main">

@@ -46,7 +46,8 @@ function MonthView({ data, tab, reload }: { data: any; tab: 'plan' | 'review'; r
         <SaveBadge state={save.state} />
       </div>
 
-      <DateJump data={data} today={today} />
+      {/* 月間予定には日付から開ける大きなカレンダーがあるので、小さいカレンダーはレビューだけに */}
+      {tab === 'review' && <DateJump data={data} today={today} />}
 
       {tab === 'plan' ? (
         <>

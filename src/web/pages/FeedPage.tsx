@@ -7,7 +7,7 @@ import { ErrorBox, Loading } from '../components/ui';
 import { useApi } from '../hooks';
 import { L } from '../i18n';
 import { Composer } from '../social/Composer';
-import { PostCard } from '../social/PostCard';
+import { DoneGroup, PostCard, groupDone } from '../social/PostCard';
 import { Stories } from '../social/Stories';
 
 const SIGNAL: Record<string, string> = { ok: L('順調', 'On track'), warn: L('注意', 'At risk'), bad: L('遅れ', 'Behind'), none: L('未入力', 'No data') };
@@ -79,7 +79,9 @@ export function FeedPage() {
             <Link className="btn btn-primary" to="/today">{L('今日のページへ', 'Go to Today')}</Link>
           </div>
         )}
-        {posts?.map((p) => (
+        {posts && groupDone(posts).map((p) => 'group' in p ? (
+          <DoneGroup key={p.group[0].id} posts={p.group} meId={user?.id} isOwner={isOwner} onDeleted={(id) => setPosts((ps) => ps!.filter((x) => x.id !== id))} />
+        ) : (
           <PostCard key={p.id} p={p} meId={user?.id} isOwner={isOwner} onDeleted={() => setPosts((ps) => ps!.filter((x) => x.id !== p.id))} />
         ))}
         {next && (

@@ -170,4 +170,12 @@ await boss('PATCH', `/api/life/goals/${past.id}`, { achieved_at: '2024-05-01' })
 const lifePast = await staff('GET', '/api/life');
 ok(lifePast.goals.find((x) => x.id === past.id).achieved_at === '2024-05-01', '成し遂げた年月を直せる');
 ok(!(await staff('GET', '/api/stories')).board.some((b) => b.id === past.id), '成し遂げたことはストーリーズの「ありたい姿」には出ない');
+
+// 改善はプロジェクトと別に出せる（つなぐのは任意）
+const free = await staff('POST', `/api/terms/${term.id}/improvements`, { issue: '朝礼が長い', action: '朝礼を10分にする' });
+ok(free.goal_id === null && free.term_id === term.id, 'プロジェクトにつながない改善を出せる');
+const linked = await staff('PATCH', `/api/improvements/${free.id}`, { goal_id: g.id });
+ok(linked.goal_id === g.id && linked.goal_title === g.title, 'あとからプロジェクトにつなげられる');
+ok((await staff('PATCH', `/api/improvements/${free.id}`, { goal_id: null })).goal_id === null, 'つながりを外せる');
+ok((await boss('GET', `/api/terms/${term.id}/improvements`)).some((i) => i.id === free.id), 'タームの改善一覧に出る');
 console.log('ALL OK');

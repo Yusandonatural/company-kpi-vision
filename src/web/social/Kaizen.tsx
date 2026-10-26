@@ -8,7 +8,7 @@ import { L } from '../i18n';
 export const KAIZEN_STATUS: Record<string, string> = { idea: L('候補', 'Idea'), doing: L('実行中', 'Doing'), done: L('完了', 'Done'), dropped: L('見送り', 'Dropped') };
 const ORDER: Record<string, number> = { doing: 0, idea: 1, done: 2, dropped: 3 };
 
-/** ミッション → ビジョン → この90日 → プロジェクト＋改善 の流れ（目標のページの上） */
+/** ミッション → ビジョン → この90日 → プロジェクト／改善 の流れ（目標のページの上） */
 export function FlowStrip({ life, term, projects, imps }: { life: any; term: any; projects: any[]; imps: any[] }) {
   const info = term.info;
   const open = imps.filter((i) => i.status === 'idea' || i.status === 'doing').length;
@@ -27,15 +27,16 @@ export function FlowStrip({ life, term, projects, imps }: { life: any; term: any
             : L('終わりました', 'Finished'),
       to: null,
     },
-    { no: 4, label: L('プロジェクト＋改善', 'Projects + Kaizen'), body: L(`${projects.length}件・改善 完了${done} / 残り${open}`, `${projects.length} projects · Kaizen ${done} done / ${open} open`), to: `/term/${term.id}/goals` },
+    { no: 4, label: L('プロジェクト', 'Projects'), body: L(`${projects.length}件`, `${projects.length}`), to: `/term/${term.id}/goals` },
+    { no: 5, label: L('改善', 'Kaizen'), body: L(`完了${done} / 残り${open}`, `${done} done / ${open} open`), to: `#kaizen` },
   ];
   return (
-    <ol className="flow-strip" aria-label={L('ミッションから90日のプロジェクトまで', 'From mission to 90-day projects')}>
+    <ol className="flow-strip" aria-label={L('ミッションから90日のプロジェクトと改善まで', 'From mission to 90-day projects and kaizen')}>
       {steps.map((s) => (
         <li key={s.no}>
           <span className="step-no">{s.no}</span>
           <span className="flow-label">{s.label}</span>
-          {s.to ? <Link to={s.to} className="flow-body">{s.body}</Link> : <span className="flow-body">{s.body}</span>}
+          {s.to?.startsWith('#') ? <a href={s.to} className="flow-body">{s.body}</a> : s.to ? <Link to={s.to} className="flow-body">{s.body}</Link> : <span className="flow-body">{s.body}</span>}
         </li>
       ))}
       <li className="flow-end" aria-hidden="true">{L(`${term.end_date.slice(5).replace('-', '/')} までにやりきる`, `Finish by ${shortDate(term.end_date)}`)}</li>
@@ -43,10 +44,11 @@ export function FlowStrip({ life, term, projects, imps }: { life: any; term: any
   );
 }
 
-/** プロジェクトごとの改善。誰でも出せて、期限はタームの最終日まで */
-export function KaizenList({ goal, term, items, members, onChange }: { goal: any; term: any; items: any[]; members: any[]; onChange: () => void }) {
+/** この90日の改善。プロジェクトとは別に出し、つなぐプロジェクトは任意。誰でも出せて、期限はタームの最終日まで */
+export function KaizenList({ term, items, projects, members, onChange }: { term: any; items: any[]; projects: any[]; members: any[]; onChange: () => void }) {
   const [adding, setAdding] = useState(false);
-  const [f, setF] = useState({ issue: '', action: '', due_date: '', owner_user_id: '' });
+  const empty = { issue: '', action: '', due_date: '', owner_user_id: '', goal_id: '' };
+  const [f, setF] = useState(empty);
   const [err, setErr] = useState('');
   const today = todayJST();
   const list = [...items].sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
@@ -63,7 +65,6 @@ export function KaizenList({ goal, term, items, members, onChange }: { goal: any
   return (
     <div className="kaizen">
       <div className="kaizen-head">
-        <span className="mini-title">{L('改善', 'Kaizen')}</span>
         <span className="muted small">{L('完了 ', 'Done ')}{counts.done} / {counts.all}</span>
         <button className="btn btn-small btn-ghost" onClick={() => setAdding((v) => !v)} aria-expanded={adding}>{adding ? L('閉じる', 'Close') : L('＋ 改善を出す', '+ Add kaizen')}</button>
       </div>
@@ -85,6 +86,7 @@ export function KaizenList({ goal, term, items, members, onChange }: { goal: any
               <div className="kz-body">
                 {i.issue && <span className="kz-issue">{L('課題：', 'Issue: ')}{i.issue}</span>}
                 <span className="kz-action">{i.action}</span>
+                {i.goal_title && <span className="kz-project">◎ {i.goal_title}</span>}
                 {i.status === 'done' ? (
                   <ResultInput item={i} onSave={(result) => act(() => patch(`/improvements/${i.id}`, { result }))} />
                 ) : null}
@@ -103,24 +105,31 @@ export function KaizenList({ goal, term, items, members, onChange }: { goal: any
           className="form kaizen-form"
           onSubmit={(e) => {
             e.preventDefault();
-            if (f.action.trim()) act(() => post(`/goals/${goal.id}/improvements`, f)).then(() => { setF({ issue: '', action: '', due_date: '', owner_user_id: '' }); setAdding(false); });
+            if (f.action.trim()) act(() => post(`/terms/${term.id}/improvements`, { ...f, goal_id: f.goal_id || null })).then(() => { setF(empty); setAdding(false); });
           }}
         >
-          <label>{L('課題・気づき', 'Issue / insight')}<input id={`kz-issue-${goal.id}`} value={f.issue} placeholder={L('例：定期便の2回目で解約が多い', 'e.g. Many subscribers cancel after the 2nd box')} onChange={(e) => setF({ ...f, issue: e.target.value })} /></label>
-          <label>{L('打ち手', 'Action')}<input id={`kz-action-${goal.id}`} value={f.action} required placeholder={L('例：2回目の同梱物にお茶の淹れ方カードを入れる', 'e.g. Add a brewing guide card to the 2nd box')} onChange={(e) => setF({ ...f, action: e.target.value })} /></label>
+          <label>{L('課題・気づき', 'Issue / insight')}<input id="kz-issue" value={f.issue} placeholder={L('例：定期便の2回目で解約が多い', 'e.g. Many subscribers cancel after the 2nd box')} onChange={(e) => setF({ ...f, issue: e.target.value })} /></label>
+          <label>{L('打ち手', 'Action')}<input id="kz-action" value={f.action} required placeholder={L('例：2回目の同梱物にお茶の淹れ方カードを入れる', 'e.g. Add a brewing guide card to the 2nd box')} onChange={(e) => setF({ ...f, action: e.target.value })} /></label>
           <div className="form-row">
             <label>
               {L(`期限（${shortDate(term.end_date)}まで）`, `Due (by ${shortDate(term.end_date)})`)}
-              <input id={`kz-due-${goal.id}`} type="date" min={term.start_date} max={term.end_date} value={f.due_date} onChange={(e) => setF({ ...f, due_date: e.target.value })} />
+              <input id="kz-due" type="date" min={term.start_date} max={term.end_date} value={f.due_date} onChange={(e) => setF({ ...f, due_date: e.target.value })} />
             </label>
             <label>
               {L('担当', 'Owner')}
-              <select id={`kz-owner-${goal.id}`} value={f.owner_user_id} onChange={(e) => setF({ ...f, owner_user_id: e.target.value })}>
+              <select id="kz-owner" value={f.owner_user_id} onChange={(e) => setF({ ...f, owner_user_id: e.target.value })}>
                 <option value="">{L('自分', 'Me')}</option>
                 {members.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
               </select>
             </label>
           </div>
+          <label>
+            {L('つながるプロジェクト（任意）', 'Related project (optional)')}
+            <select id="kz-project" value={f.goal_id} onChange={(e) => setF({ ...f, goal_id: e.target.value })}>
+              <option value="">{L('なし', 'None')}</option>
+              {projects.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+            </select>
+          </label>
           <button className="btn btn-primary" disabled={!f.action.trim()}>{L('改善を出す', 'Add kaizen')}</button>
         </form>
       )}

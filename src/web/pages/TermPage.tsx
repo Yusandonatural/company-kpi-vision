@@ -67,7 +67,7 @@ export function TermPage() {
 
       <section className="card">
         <div className="card-head">
-          <h2 className="card-title">{L('この90日のプロジェクト＋改善', 'Projects + Kaizen for these 90 days')}</h2>
+          <h2 className="card-title">{L('この90日のプロジェクト', 'Projects for these 90 days')}</h2>
           <Link className="btn btn-small btn-ghost" to={`/term/${term.id}/goals`}>{L('編集', 'Edit')}</Link>
         </div>
         {projects.length === 0 && <p className="muted">{L('まだありません。', 'None yet. ')}<Link to={`/term/${term.id}/goals`}>{L('目標を立てる', 'Set goals')}</Link></p>}
@@ -97,10 +97,15 @@ export function TermPage() {
                   {g.obstacle_plan && <> → <strong>{L('対策:', 'Plan:')}</strong> {g.obstacle_plan}</>}
                 </p>
               )}
-              <KaizenList goal={g} term={term} items={imps.filter((i: any) => i.goal_id === g.id)} members={org.data?.members ?? []} onChange={kaizen.reload} />
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="card" id="kaizen">
+        <h2 className="card-title">{L('この90日の改善', 'Kaizen for these 90 days')}</h2>
+        <p className="muted small">{L('課題 → 打ち手 → 結果。プロジェクトとは別に出せます（つなげるのは任意）。', 'Issue → action → result. Add them on their own; linking a project is optional.')}</p>
+        <KaizenList term={term} items={imps} projects={projects} members={org.data?.members ?? []} onChange={kaizen.reload} />
       </section>
 
       <section className="card">

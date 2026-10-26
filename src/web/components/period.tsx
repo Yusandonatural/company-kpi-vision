@@ -163,7 +163,7 @@ export function ByGoalTable({ rows }: { rows: any[] }) {
   return (
     <table className="simple-table">
       <thead>
-        <tr><th>{L('目標', 'Goal')}</th><th>{L('できた', 'Done')}</th><th>{L('できなかった', 'Missed')}</th><th>{L('達成率', 'Rate')}</th></tr>
+        <tr><th>{L('目標', 'Goal')}</th><th className="num">{L('できた', 'Done')}</th><th className="num">{L('できなかった', 'Missed')}</th><th className="num">{L('達成率', 'Rate')}</th></tr>
       </thead>
       <tbody>
         {rows.map((g) => (

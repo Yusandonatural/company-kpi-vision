@@ -178,4 +178,15 @@ const linked = await staff('PATCH', `/api/improvements/${free.id}`, { goal_id: g
 ok(linked.goal_id === g.id && linked.goal_title === g.title, 'あとからプロジェクトにつなげられる');
 ok((await staff('PATCH', `/api/improvements/${free.id}`, { goal_id: null })).goal_id === null, 'つながりを外せる');
 ok((await boss('GET', `/api/terms/${term.id}/improvements`)).some((i) => i.id === free.id), 'タームの改善一覧に出る');
+
+// 改善ポイントの指摘 → 修正
+const pt = await staff('POST', `/api/terms/${term.id}/improvements`, { issue: '問い合わせの返信が遅い' });
+ok(pt.issue === '問い合わせの返信が遅い' && pt.action === '' && pt.status === 'idea', '改善ポイントは指摘だけで出せる');
+let emptyErr = ''; try { await staff('POST', `/api/terms/${term.id}/improvements`, { issue: ' ' }); } catch (e) { emptyErr = e.message; }
+ok(emptyErr.includes('400'), '指摘が空なら断る');
+await staff('PATCH', `/api/improvements/${pt.id}`, { action: '返信テンプレートを作った' });
+const fixed = await boss('PATCH', `/api/improvements/${pt.id}`, { status: 'done' });
+ok(fixed.action === '返信テンプレートを作った' && fixed.status === 'done', 'あとから修正を書いて修正済みにできる');
+const fpost = (await staff('GET', `/api/feed?user=${me.user.id}&limit=30`)).posts.find((p) => p.kind === 'improvement' && p.ref_id === pt.id);
+ok(fpost && fpost.body.startsWith('改善ポイント「問い合わせの返信が遅い」を修正') && fpost.body.includes('修正：返信テンプレートを作った'), '修正済みはタイムラインに「指摘 → 修正」で出る');
 console.log('ALL OK');

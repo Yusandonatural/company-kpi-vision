@@ -473,6 +473,13 @@ a.flow-body:hover { color: var(--accent); }
 .kz-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; }
 .kz-issue { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .kz-action { font-weight: 600; overflow-wrap: anywhere; }
+.kz-point { font-weight: 600; overflow-wrap: anywhere; }
+.kz-done .kz-point, .kz-dropped .kz-point { color: var(--muted); }
+.kz-dropped .kz-point { text-decoration: line-through; }
+.kz-fix { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.kz-fix span { flex: none; font-weight: 700; }
+.kz-fix input { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 13px; }
+.kz-s-done + .kz-body .kz-fix span { color: var(--ok); }
 .kz-project { font-size: 12px; color: var(--accent); overflow-wrap: anywhere; }
 .kz-status { max-width: 7.5em; }
 .kz-done .kz-action, .kz-dropped .kz-action { color: var(--muted); }

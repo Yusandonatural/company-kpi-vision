@@ -104,7 +104,7 @@ export function TermPage() {
 
       <section className="card" id="kaizen">
         <h2 className="card-title">{L('この90日の改善', 'Kaizen for these 90 days')}</h2>
-        <p className="muted small">{L('課題 → 打ち手 → 結果。プロジェクトとは別に出せます（つなげるのは任意）。', 'Issue → action → result. Add them on their own; linking a project is optional.')}</p>
+        <p className="muted small">{L('改善ポイントを指摘 → 修正。プロジェクトとは別に出せます（つなげるのは任意）。', 'Flag a kaizen point → fix it. Separate from projects (linking one is optional).')}</p>
         <KaizenList term={term} items={imps} projects={projects} members={org.data?.members ?? []} onChange={kaizen.reload} />
       </section>
 

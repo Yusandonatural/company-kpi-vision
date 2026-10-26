@@ -4,7 +4,7 @@ import { all, one, ownGoal, ownTerm, run, uid } from '../db';
 import { HttpError, type AppEnv } from '../env';
 import { autoPost, retractAutoPost } from './social';
 
-/** 改善（プロジェクトごとの「課題 → 打ち手 → 結果」）。90日のタームの中で終わらせる */
+/** 改善（「改善ポイントの指摘 → 修正」）。90日のタームの中で終わらせる。issue = 指摘、action = 修正内容 */
 export const kaizenRoutes = new Hono<AppEnv>();
 
 const STATUSES = ['idea', 'doing', 'done', 'dropped'];
@@ -45,8 +45,9 @@ kaizenRoutes.get('/terms/:id/improvements', async (c) => {
 async function createImprovement(c: any, term: any, goalId: unknown) {
   const u = c.get('user');
   const b = await c.req.json();
+  const issue = str(b.issue, 500);
   const action = str(b.action, 300);
-  if (!action) throw new HttpError(400, '打ち手を書いてください');
+  if (!issue && !action) throw new HttpError(400, '改善ポイント（指摘）を書いてください');
   const goal = await checkProject(c.env.DB, u.id, term, goalId ?? b.goal_id);
   const due = checkDue(term, b.due_date);
   const owner = (await checkOwner(c.env.DB, b.owner_user_id)) ?? u.id;
@@ -56,7 +57,7 @@ async function createImprovement(c: any, term: any, goalId: unknown) {
   await run(
     c.env.DB,
     'INSERT INTO improvements (id, term_id, goal_id, issue, action, status, owner_user_id, due_date, sort_order, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    id, term.id, goal, str(b.issue, 500), action, status, owner, due, (max?.m ?? -1) + 1, u.id,
+    id, term.id, goal, issue, action, status, owner, due, (max?.m ?? -1) + 1, u.id,
   );
   return c.json(await one(c.env.DB, `${SELECT} WHERE i.id = ?`, id));
 }
@@ -86,7 +87,7 @@ kaizenRoutes.patch('/improvements/:id', async (c) => {
   const b = await c.req.json();
   const f: Record<string, unknown> = {};
   if ('issue' in b) f.issue = str(b.issue, 500);
-  if ('action' in b) f.action = str(b.action, 300) || i.action;
+  if ('action' in b) f.action = str(b.action, 300);
   if ('result' in b) f.result = str(b.result, 1000);
   if ('due_date' in b) f.due_date = checkDue(await one(c.env.DB, 'SELECT * FROM terms WHERE id = ?', i.term_id), b.due_date);
   if ('goal_id' in b) f.goal_id = await checkProject(c.env.DB, u.id, await one(c.env.DB, 'SELECT * FROM terms WHERE id = ?', i.term_id), b.goal_id);
@@ -99,7 +100,10 @@ kaizenRoutes.patch('/improvements/:id', async (c) => {
   if (keys.length) await run(c.env.DB, `UPDATE improvements SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...keys.map((k) => f[k]), i.id);
   if (f.status === 'done' && i.status !== 'done') {
     const result = (f.result as string | undefined) ?? i.result;
-    await autoPost(c.env.DB, u.id, 'improvement', i.id, `改善「${(f.action as string) ?? i.action}」を完了${result ? '\n' + result : ''}`, ('goal_id' in f ? (f.goal_id as string | null) : i.goal_id));
+    const point = ((f.issue as string | undefined) ?? i.issue) || ((f.action as string | undefined) ?? i.action);
+    const fix = (f.action as string | undefined) ?? i.action;
+    const lines = [fix && fix !== point ? `修正：${fix}` : '', result].filter(Boolean).join('\n');
+    await autoPost(c.env.DB, u.id, 'improvement', i.id, `改善ポイント「${point}」を修正${lines ? '\n' + lines : ''}`, ('goal_id' in f ? (f.goal_id as string | null) : i.goal_id));
   }
   if (f.status && f.status !== 'done' && i.status === 'done') await retractAutoPost(c.env.DB, 'improvement', i.id);
   return c.json(await one(c.env.DB, `${SELECT} WHERE i.id = ?`, i.id));

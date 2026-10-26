@@ -524,3 +524,15 @@ a.flow-body:hover { color: var(--accent); }
 .vb-ym { display: flex; gap: 6px; flex: 1 1 100%; }
 .vb-ym select { flex: 1 1 0; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; }
 .vb-add-past .vb-ym + input { flex: 1 1 100%; }
+
+/* 「できた」のまとめ */
+.done-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
+.done-list li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid rgba(0,0,0,.06); }
+.done-list li:first-child { border-top: 0; }
+.done-title { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.done-title b { font-size: 16px; }
+.done-title .pa-goal { margin: 0; }
+.done-like { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; color: var(--muted, #888); cursor: pointer; padding: 6px; border-radius: 999px; font-size: 13px; }
+.done-like.liked { color: #e0245e; }
+.done-group-open { display: contents; }
+.done-group-fold { justify-self: center; margin: -4px auto 4px; display: block; }

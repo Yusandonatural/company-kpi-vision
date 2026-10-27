@@ -124,6 +124,7 @@ function goalFields(b: any) {
   if ('metric_unit' in b) f.metric_unit = str(b.metric_unit, 20);
   for (const k of ['metric_start', 'metric_current', 'metric_target']) if (k in b) f[k] = num(b[k]);
   if ('obstacle' in b) f.obstacle = str(b.obstacle, 1000);
+  if ('agent_instructions' in b) f.agent_instructions = str(b.agent_instructions, 600);
   if ('obstacle_plan' in b) f.obstacle_plan = str(b.obstacle_plan, 1000);
   // 語学アプリとの連動：空なら解除、知らない値は無視
   if ('link_source' in b) {

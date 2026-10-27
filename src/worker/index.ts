@@ -11,6 +11,7 @@ import { kpiRoutes } from './routes/kpi';
 import { orgRoutes } from './org';
 import { socialRoutes } from './routes/social';
 import { kaizenRoutes } from './routes/kaizen';
+import { agentRoutes } from './routes/agent';
 import { markMissed } from './tasks';
 
 const app = new Hono<AppEnv>();
@@ -32,6 +33,7 @@ app.route('/api', orgRoutes);
 app.route('/api', kpiRoutes);
 app.route('/api', socialRoutes);
 app.route('/api', kaizenRoutes);
+app.route('/api', agentRoutes);
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
 
 export default {

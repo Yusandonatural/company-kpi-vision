@@ -6,6 +6,7 @@ import { ErrorBox, Loading, Progress, Stat, metricText, pct } from '../component
 import { useApi } from '../hooks';
 import { isEn, L } from '../i18n';
 import { FlowStrip, KaizenList } from '../social/Kaizen';
+import { AgentBox, ProjectKpis } from '../social/ProjectKpis';
 
 /** habitLabel（日本語）の英語版 */
 function habitText(g: any): string {
@@ -21,6 +22,9 @@ export function TermPage() {
   const life = useApi<any>('/life');
   const kaizen = useApi<any[]>(`/terms/${id}/improvements`);
   const org = useApi<any>('/org');
+  const pk = useApi<any>(`/terms/${id}/project-kpis`);
+  const me = useApi<any>('/me');
+  const manager = ['owner', 'lead'].includes(me.data?.member?.role);
   if (error) return <ErrorBox message={error} onRetry={reload} />;
   if (!term) return <Loading />;
   const imps = kaizen.data ?? [];
@@ -91,6 +95,8 @@ export function TermPage() {
                 {g.tasks.total > 0 && L(` ・ 関連タスク できた ${g.tasks.done} / ${g.tasks.total}`, ` · Linked tasks done ${g.tasks.done} / ${g.tasks.total}`)}
                 {g.due_date && L(` ・ 期限 ${shortDate(g.due_date)}`, ` · Due ${shortDate(g.due_date)}`)}
               </p>
+              <ProjectKpis goal={g} kpis={(pk.data?.kpis ?? []).filter((k: any) => k.goal_id === g.id)} sources={pk.data?.sources ?? []} manager={manager} onChange={pk.reload} />
+              <AgentBox goal={g} requests={(pk.data?.requests ?? []).filter((r: any) => r.goal_id === g.id)} manager={manager} onChange={() => { pk.reload(); reload(); }} />
               {g.obstacle && (
                 <p className="obstacle small">
                   <strong>{L('障害:', 'Obstacle:')}</strong> {g.obstacle}

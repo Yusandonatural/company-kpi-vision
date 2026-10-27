@@ -6,6 +6,33 @@ export const KPI_SOURCES: Record<string, { id: string; label: string; unit: stri
   'shopify:sales': { id: 'shopify:sales', label: 'Shopify：EC売上', unit: '円' },
 };
 
+/** プロジェクトの KPI をエージェントが毎月入れるときの取り先 */
+export const PROJECT_KPI_SOURCES: Record<string, { id: string; label: string; unit: string }> = {
+  'freee:sales': { id: 'freee:sales', label: 'freee：売上高', unit: '円' },
+  'freee:operating_profit': { id: 'freee:operating_profit', label: 'freee：営業利益', unit: '円' },
+  'freee:sga_ratio': { id: 'freee:sga_ratio', label: 'freee：販管費率', unit: '%' },
+  'shopify:sales': { id: 'shopify:sales', label: 'Shopify：売上合計', unit: '円' },
+  'shopify:orders': { id: 'shopify:orders', label: 'Shopify：注文数', unit: '件' },
+  'shopify:new_customers': { id: 'shopify:new_customers', label: 'Shopify：新規顧客数', unit: '人' },
+  'shopify:repeat_rate': { id: 'shopify:repeat_rate', label: 'Shopify：リピート率', unit: '%' },
+  custom: { id: 'custom', label: 'その他（メモで指定）', unit: '' },
+};
+
+/** 月の実績を目標と比べた達成率（小さいほど良い指標は逆数）。値か目標がなければ null */
+export function kpiRate(value: number | null | undefined, target: number | null | undefined, direction: 'up' | 'down' = 'up'): number | null {
+  if (value == null || !Number.isFinite(value) || !target) return null;
+  if (direction === 'down') return value === 0 ? 2 : target / value;
+  return value / target;
+}
+
+/** 達成率 → 信号（1以上 達成 / 0.85以上 あと一歩 / それ未満 要注意 / 未入力） */
+export function kpiJudge(rate: number | null): Signal {
+  if (rate == null) return 'none';
+  if (rate >= 1) return 'ok';
+  if (rate >= 0.85) return 'warn';
+  return 'bad';
+}
+
 export type Signal = 'ok' | 'warn' | 'bad' | 'none';
 
 /**

@@ -189,4 +189,25 @@ const fixed = await boss('PATCH', `/api/improvements/${pt.id}`, { status: 'done'
 ok(fixed.action === '返信テンプレートを作った' && fixed.status === 'done', 'あとから修正を書いて修正済みにできる');
 const fpost = (await staff('GET', `/api/feed?user=${me.user.id}&limit=30`)).posts.find((p) => p.kind === 'improvement' && p.ref_id === pt.id);
 ok(fpost && fpost.body.startsWith('改善ポイント「問い合わせの返信が遅い」を修正') && fpost.body.includes('修正：返信テンプレートを作った'), '修正済みはタイムラインに「指摘 → 修正」で出る');
+
+// プロジェクトの KGI・KPI と担当エージェント
+const pkpi = await boss('POST', `/api/goals/${g.id}/kpis`, { name: '新規の取引先', kind: 'kpi', target: 10, unit: '件' });
+ok(pkpi.kind === 'kpi' && pkpi.target === 10, '代表はプロジェクトに KPI を付けられる');
+await mem('POST', `/api/goals/${g.id}/kpis`, { name: 'x' }, 403);
+ok(true, '担当は KPI を作れない');
+await mem('PUT', `/api/project-kpis/${pkpi.id}/values/2026-10`, { value: 7 });
+await boss('PUT', `/api/project-kpis/${pkpi.id}/values/2026-09`, { value: 4 });
+let badMonth = ''; try { await boss('PUT', `/api/project-kpis/${pkpi.id}/values/2026-13`, { value: 1 }); } catch (e) { badMonth = e.message; }
+ok(badMonth.includes('400'), 'おかしな月は断る');
+const pkl = await staff('GET', `/api/terms/${term.id}/project-kpis`);
+const pk1 = pkl.kpis.find((k) => k.id === pkpi.id);
+ok(pk1.values['2026-10'] === 7 && pk1.values['2026-09'] === 4, '担当も月の実績を入れられ、一覧に出る');
+await boss('PATCH', `/api/project-kpis/${pkpi.id}`, { auto_source: 'shopify:orders', target: 12 });
+ok((await boss('GET', `/api/terms/${term.id}/project-kpis`)).kpis.find((k) => k.id === pkpi.id).auto_source === 'shopify:orders', '自動で入れる取り先を設定できる');
+await boss('PATCH', `/api/goals/${g.id}`, { agent_instructions: '見込み客の探し方を考えて' });
+const ask = await mem('POST', `/api/goals/${g.id}/agent`, { question: '展示会はどこがよい？' });
+ok(ask.status === 'pending' && ask.kind === 'ask', 'だれでもエージェントに相談できる（回答待ち）');
+ok((await boss('GET', `/api/terms/${term.id}/project-kpis`)).requests.some((r) => r.id === ask.id), '相談が一覧に出る');
+await boss('DELETE', `/api/project-kpis/${pkpi.id}`);
+ok(!(await boss('GET', `/api/terms/${term.id}/project-kpis`)).kpis.some((k) => k.id === pkpi.id), '指標を消すと実績も消える');
 console.log('ALL OK');

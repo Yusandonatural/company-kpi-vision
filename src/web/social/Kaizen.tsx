@@ -28,8 +28,8 @@ export function FlowStrip({ life, term, projects, imps }: { life: any; term: any
             : L('終わりました', 'Finished'),
       to: null,
     },
-    { no: 4, label: L('プロジェクト', 'Projects'), body: L(`${projects.length}件`, `${projects.length}`), to: `/term/${term.id}/goals` },
-    { no: 5, label: L('改善', 'Kaizen'), body: L(`修正済み${done} / 残り${open}`, `${done} fixed / ${open} open`), to: `#kaizen` },
+    { no: 4, label: L('プロジェクト', 'Projects'), body: L(`${projects.length}件`, `${projects.length}`), to: `/term/${term.id}` },
+    { no: 5, label: L('改善', 'Kaizen'), body: L(`修正済み${done} / 残り${open}`, `${done} fixed / ${open} open`), to: `/term/${term.id}?tab=kaizen` },
   ];
   return (
     <ol className="flow-strip" aria-label={L('ミッションから90日のプロジェクトと改善まで', 'From mission to 90-day projects and kaizen')}>
@@ -37,7 +37,7 @@ export function FlowStrip({ life, term, projects, imps }: { life: any; term: any
         <li key={s.no}>
           <span className="step-no">{s.no}</span>
           <span className="flow-label">{s.label}</span>
-          {s.to?.startsWith('#') ? <a href={s.to} className="flow-body">{s.body}</a> : s.to ? <Link to={s.to} className="flow-body">{s.body}</Link> : <span className="flow-body">{s.body}</span>}
+          {s.to ? <Link to={s.to} className="flow-body">{s.body}</Link> : <span className="flow-body">{s.body}</span>}
         </li>
       ))}
       <li className="flow-end" aria-hidden="true">{L(`${term.end_date.slice(5).replace('-', '/')} までにやりきる`, `Finish by ${shortDate(term.end_date)}`)}</li>

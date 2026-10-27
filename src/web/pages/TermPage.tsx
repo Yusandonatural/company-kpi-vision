@@ -1,8 +1,8 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { addDays, daysInRange, mondayOf, shortDate, todayJST, weekday, WEEKDAYS_EN } from '../../shared/dates';
 import { habitLabel, habitScheduled, habitWeekdays } from '../../shared/progress';
 import { TermHeader } from '../components/TermHeader';
-import { ErrorBox, Loading, Progress, Stat, metricText, pct } from '../components/ui';
+import { ErrorBox, Loading, Progress, Stat, SubTabs, metricText, pct } from '../components/ui';
 import { useApi } from '../hooks';
 import { isEn, L } from '../i18n';
 import { FlowStrip, KaizenList } from '../social/Kaizen';
@@ -25,6 +25,8 @@ export function TermPage() {
   const pk = useApi<any>(`/terms/${id}/project-kpis`);
   const me = useApi<any>('/me');
   const manager = ['owner', 'lead'].includes(me.data?.member?.role);
+  const [search] = useSearchParams();
+  const tab = search.get('tab') === 'kaizen' ? 'kaizen' : 'projects';
   if (error) return <ErrorBox message={error} onRetry={reload} />;
   if (!term) return <Loading />;
   const imps = kaizen.data ?? [];
@@ -69,7 +71,13 @@ export function TermPage() {
         </div>
       )}
 
-      <section className="card">
+      {/* プロジェクトと改善はタブで分ける（?tab=kaizen で改善） */}
+      <SubTabs items={[
+        { to: `/term/${term.id}`, label: L(`プロジェクト ${projects.length}`, `Projects ${projects.length}`), active: tab === 'projects' },
+        { to: `/term/${term.id}?tab=kaizen`, label: L(`改善 ${imps.filter((i: any) => i.status === 'idea' || i.status === 'doing').length}`, `Kaizen ${imps.filter((i: any) => i.status === 'idea' || i.status === 'doing').length}`), active: tab === 'kaizen' },
+      ]} />
+
+      {tab === 'projects' && <section className="card">
         <div className="card-head">
           <h2 className="card-title">{L('この90日のプロジェクト', 'Projects for these 90 days')}</h2>
           <Link className="btn btn-small btn-ghost" to={`/term/${term.id}/goals`}>{L('編集', 'Edit')}</Link>
@@ -106,13 +114,13 @@ export function TermPage() {
             </li>
           ))}
         </ul>
-      </section>
+      </section>}
 
-      <section className="card" id="kaizen">
+      {tab === 'kaizen' && <section className="card" id="kaizen">
         <h2 className="card-title">{L('この90日の改善', 'Kaizen for these 90 days')}</h2>
         <p className="muted small">{L('改善ポイントを指摘 → 修正。プロジェクトとは別に出せます（つなげるのは任意）。', 'Flag a kaizen point → fix it. Separate from projects (linking one is optional).')}</p>
         <KaizenList term={term} items={imps} projects={projects} members={org.data?.members ?? []} onChange={kaizen.reload} />
-      </section>
+      </section>}
 
       <section className="card">
         <h2 className="card-title">{L('習慣', 'Habits')}</h2>

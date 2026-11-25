@@ -8,10 +8,37 @@ import { autoPost, retractAutoPost } from './social';
 export const kaizenRoutes = new Hono<AppEnv>();
 
 const STATUSES = ['idea', 'doing', 'done', 'dropped'];
+const SCOPES = ['company', 'department', 'project'];
+
+/**
+ * 改善の区分（migrations/0012）を、まだ入っていなければアプリが自分で入れる。
+ * 本番 D1 にマイグレーションを流せない環境でも動くように。入れたら d1_migrations にも記録して二重に流れないようにする
+ */
+let scopeReady: Promise<void> | null = null;
+function ensureKaizenScope(db: D1Database) {
+  scopeReady ??= (async () => {
+    const cols = await all(db, 'PRAGMA table_info(improvements)');
+    if (cols.some((col) => col.name === 'scope')) return;
+    await db.batch([
+      db.prepare("ALTER TABLE improvements ADD COLUMN scope TEXT NOT NULL DEFAULT 'company'"),
+      db.prepare('ALTER TABLE improvements ADD COLUMN department_id TEXT REFERENCES departments(id) ON DELETE SET NULL'),
+      db.prepare("UPDATE improvements SET scope = 'project' WHERE goal_id IS NOT NULL"),
+    ]);
+    const m = await one(db, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'd1_migrations'");
+    if (m) await run(db, "INSERT INTO d1_migrations (name) SELECT '0012_kaizen_scope.sql' WHERE NOT EXISTS (SELECT 1 FROM d1_migrations WHERE name = '0012_kaizen_scope.sql')");
+  })().catch((e) => {
+    scopeReady = null;
+    throw e;
+  });
+  return scopeReady;
+}
+kaizenRoutes.use('/terms/:id/improvements', async (c, next) => { await ensureKaizenScope(c.env.DB); await next(); });
+kaizenRoutes.use('/goals/:id/improvements', async (c, next) => { await ensureKaizenScope(c.env.DB); await next(); });
+kaizenRoutes.use('/improvements/*', async (c, next) => { await ensureKaizenScope(c.env.DB); await next(); });
 const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
-const SELECT = `SELECT i.*, g.title AS goal_title, u.name AS owner_name, u.email AS owner_email, u.picture_url AS owner_picture
-  FROM improvements i LEFT JOIN goals g ON g.id = i.goal_id LEFT JOIN users u ON u.id = i.owner_user_id`;
+const SELECT = `SELECT i.*, g.title AS goal_title, d.name AS department_name, u.name AS owner_name, u.email AS owner_email, u.picture_url AS owner_picture
+  FROM improvements i LEFT JOIN goals g ON g.id = i.goal_id LEFT JOIN departments d ON d.id = i.department_id LEFT JOIN users u ON u.id = i.owner_user_id`;
 
 /** 期限はタームの最終日まで。空ならタームの最終日 */
 function checkDue(term: any, due: unknown): string {
@@ -36,6 +63,26 @@ async function checkProject(db: D1Database, userId: string, term: any, id: unkno
   return g.id as string;
 }
 
+async function checkDepartment(db: D1Database, id: unknown) {
+  if (!id) return null;
+  const d = await one(db, 'SELECT id FROM departments WHERE id = ?', String(id));
+  if (!d) throw new HttpError(400, '部署が見つかりません');
+  return d.id as string;
+}
+
+/** 区分と、そのつなぎ先（部署・プロジェクト）をそろえる。会社なら両方なし */
+function scopeFields(scope: string, department: string | null, goal: string | null) {
+  if (scope === 'project') {
+    if (!goal) throw new HttpError(400, 'プロジェクトの改善は、どのプロジェクトかを選んでください');
+    return { scope, department_id: null, goal_id: goal };
+  }
+  if (scope === 'department') {
+    if (!department) throw new HttpError(400, '部署の改善は、どの部署かを選んでください');
+    return { scope, department_id: department, goal_id: null };
+  }
+  return { scope: 'company', department_id: null, goal_id: null };
+}
+
 kaizenRoutes.get('/terms/:id/improvements', async (c) => {
   const term = await ownTerm(c.env.DB, c.get('user').id, c.req.param('id'));
   return c.json(await all(c.env.DB, `${SELECT} WHERE i.term_id = ? ORDER BY i.sort_order, i.created_at`, term.id));
@@ -49,6 +96,10 @@ async function createImprovement(c: any, term: any, goalId: unknown) {
   const action = str(b.action, 300);
   if (!issue && !action) throw new HttpError(400, '改善ポイント（指摘）を書いてください');
   const goal = await checkProject(c.env.DB, u.id, term, goalId ?? b.goal_id);
+  const department = await checkDepartment(c.env.DB, b.department_id);
+  // 区分の指定がなければ、つなぎ先から決める（以前の呼び方との互換）
+  const scope = SCOPES.includes(b.scope) ? b.scope : goal ? 'project' : department ? 'department' : 'company';
+  const sf = scopeFields(scope, department, goal);
   const due = checkDue(term, b.due_date);
   const owner = (await checkOwner(c.env.DB, b.owner_user_id)) ?? u.id;
   const status = STATUSES.includes(b.status) ? b.status : 'idea';
@@ -56,8 +107,8 @@ async function createImprovement(c: any, term: any, goalId: unknown) {
   const id = uid();
   await run(
     c.env.DB,
-    'INSERT INTO improvements (id, term_id, goal_id, issue, action, status, owner_user_id, due_date, sort_order, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    id, term.id, goal, issue, action, status, owner, due, (max?.m ?? -1) + 1, u.id,
+    'INSERT INTO improvements (id, term_id, goal_id, scope, department_id, issue, action, status, owner_user_id, due_date, sort_order, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    id, term.id, sf.goal_id, sf.scope, sf.department_id, issue, action, status, owner, due, (max?.m ?? -1) + 1, u.id,
   );
   return c.json(await one(c.env.DB, `${SELECT} WHERE i.id = ?`, id));
 }
@@ -90,7 +141,13 @@ kaizenRoutes.patch('/improvements/:id', async (c) => {
   if ('action' in b) f.action = str(b.action, 300);
   if ('result' in b) f.result = str(b.result, 1000);
   if ('due_date' in b) f.due_date = checkDue(await one(c.env.DB, 'SELECT * FROM terms WHERE id = ?', i.term_id), b.due_date);
-  if ('goal_id' in b) f.goal_id = await checkProject(c.env.DB, u.id, await one(c.env.DB, 'SELECT * FROM terms WHERE id = ?', i.term_id), b.goal_id);
+  if ('scope' in b || 'goal_id' in b || 'department_id' in b) {
+    const goal = 'goal_id' in b ? await checkProject(c.env.DB, u.id, await one(c.env.DB, 'SELECT * FROM terms WHERE id = ?', i.term_id), b.goal_id) : i.goal_id;
+    const department = 'department_id' in b ? await checkDepartment(c.env.DB, b.department_id) : i.department_id;
+    // 区分を指定しないでプロジェクトを付け外ししたときは、区分もそれに合わせる（以前の呼び方との互換）
+    const scope = SCOPES.includes(b.scope) ? b.scope : 'goal_id' in b ? (goal ? 'project' : department ? 'department' : 'company') : i.scope;
+    Object.assign(f, scopeFields(scope, department, goal));
+  }
   if ('owner_user_id' in b) f.owner_user_id = await checkOwner(c.env.DB, b.owner_user_id);
   if ('status' in b && STATUSES.includes(b.status)) {
     f.status = b.status;

@@ -634,3 +634,13 @@ a.flow-body:hover { color: var(--accent); }
 .agent-tag { flex: none; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
 .agent-a { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 .agent-wait { margin-top: 4px; font-size: 12px; color: var(--muted); }
+
+/* 改善の区分：絞り込みと、各行の印 */
+.kz-filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.kz-filter button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.kz-filter button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.kz-n { font-variant-numeric: tabular-nums; opacity: .8; }
+.kz-scope { align-self: flex-start; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; overflow-wrap: anywhere; }
+.kz-scope-company { background: var(--gold-soft); color: var(--gold); }
+.kz-scope-department { background: var(--violet-soft); color: var(--violet); }
+.kz-scope-project { background: var(--accent-soft); color: var(--accent); }

@@ -19,7 +19,7 @@ Cloudflare Developer Platform コネクタの `d1_database_query` で読み書�
 - `goals`: `term_id`, `type`（'project' だけを見る）, `title`, `why`（ねらい）, `due_date`, `status`（active|achieved|missed|cancelled）, `vision_goal_id`（→ life_goals.id）, `agent_instructions`（担当エージェントへの指示）
 - `project_kpis`: `goal_id`, `kind`（kgi=最終ゴール | kpi=毎月の先行指標）, `name`, `unit`, `target`, `direction`（up|down）, `auto_source`, `auto_note`
 - `project_kpi_values`: `kpi_id`, `month`（'YYYY-MM'）, `value`, `source`（manual|agent）。主キーは (kpi_id, month)
-- `improvements`: `term_id`, `goal_id`（任意）, `issue`（改善ポイントの指摘）, `action`（修正の内容）, `status`（idea=指摘 | doing=修正中 | done=修正済み | dropped=見送り）
+- `improvements`: `term_id`, `scope`（company=会社全体 | department=部署 | project=プロジェクト）, `department_id`（scope=department のとき）, `goal_id`（scope=project のとき）, `issue`（改善ポイントの指摘）, `action`（修正の内容）, `status`（idea=指摘 | doing=修正中 | done=修正済み | dropped=見送り）
 - `agent_requests`: `goal_id`, `kind`（ask=相談 | review=月次レビュー）, `question`, `answer`, `status`（pending|answered）, `created_at`, `answered_at`
 - `annual_kpis`: 年間の10倍KPI。`year`, `title`, `metric_unit`, `metric_target`, `metric_current`, `link_source`
 - `kpi_values`: 年間KPIの記録。`(target_type='annual', target_id, date, value, source)` が一意
@@ -67,7 +67,7 @@ answer は日本語400字程度で、「現状（数字を引用）」「改善�
 
 ### C. 改善ポイントの指摘（対象のプロジェクトごと、最大2件）
 B を踏まえ、`improvements` に新しい指摘を追加する:
-`INSERT INTO improvements (id, term_id, goal_id, issue, action, status) VALUES (lower(hex(randomblob(16))), '…', '…', '【エージェント】…（数字の根拠）', '', 'idea')`。
+`INSERT INTO improvements (id, term_id, scope, goal_id, issue, action, status) VALUES (lower(hex(randomblob(16))), '…', 'project', '…', '【エージェント】…（数字の根拠）', '', 'idea')`。
 既にある指摘・修正中の改善と重なるものは出さない。既存の改善の status や内容は書き換えない（判断するのは人）。
 
 ## 最後に

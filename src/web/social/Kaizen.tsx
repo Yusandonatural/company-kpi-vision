@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { shortDate, todayJST } from '../../shared/dates';
 import { del, patch, post } from '../api';
 import { Avatar } from '../components/Avatar';
+import { SubTabs } from '../components/ui';
 import { L } from '../i18n';
 
 /** 改善ポイントの指摘 → 修正。状況の値はそのまま、見せ方だけ「指摘・修正中・修正済み・見送り」 */
@@ -51,8 +52,12 @@ export function FlowStrip({ life, term, projects, imps }: { life: any; term: any
 /** この90日の改善。改善ポイントを指摘 → 修正。プロジェクトとは別に出し、つなぐのは任意。誰でも指摘でき、期限はタームの最終日まで */
 export function KaizenList({ term, items, projects, departments, members, onChange }: { term: any; items: any[]; projects: any[]; departments: any[]; members: any[]; onChange: () => void }) {
   const [adding, setAdding] = useState(false);
-  const [show, setShow] = useState<'all' | 'company' | 'department' | 'project'>('all');
-  const empty = { issue: '', due_date: '', owner_user_id: '', scope: 'company', department_id: '', goal_id: '' };
+  // 区分はプロジェクト／改善と同じタブで切り替える（?tab=kaizen&scope=company など。URL を送れば同じ区分が開く）
+  const [search] = useSearchParams();
+  const { pathname } = useLocation();
+  const sp = search.get('scope');
+  const show = sp === 'company' || sp === 'department' || sp === 'project' ? sp : 'all';
+  const empty = { issue: '', due_date: '', owner_user_id: '', scope: show === 'all' ? 'company' : show, department_id: '', goal_id: '' };
   const [f, setF] = useState(empty);
   const [err, setErr] = useState('');
   const today = todayJST();
@@ -72,15 +77,13 @@ export function KaizenList({ term, items, projects, departments, members, onChan
     <div className="kaizen">
       <div className="kaizen-head">
         <span className="muted small">{L('修正済み ', 'Fixed ')}{counts.done} / {counts.all}</span>
-        <button className="btn btn-small btn-ghost" onClick={() => setAdding((v) => !v)} aria-expanded={adding}>{adding ? L('閉じる', 'Close') : L('＋ 改善ポイントを指摘', '+ Flag a kaizen point')}</button>
+        <button className="btn btn-small btn-ghost" onClick={() => { if (!adding) setF({ ...f, scope: show === 'all' ? f.scope : show }); setAdding((v) => !v); }} aria-expanded={adding}>{adding ? L('閉じる', 'Close') : L('＋ 改善ポイントを指摘', '+ Flag a kaizen point')}</button>
       </div>
-      <div className="kz-filter" role="group" aria-label={L('区分で絞り込む', 'Filter by category')}>
-        {(['all', 'company', 'department', 'project'] as const).map((s) => (
-          <button key={s} type="button" className={show === s ? 'on' : ''} aria-pressed={show === s} onClick={() => setShow(s)}>
-            {s === 'all' ? L('すべて', 'All') : KAIZEN_SCOPE[s]}{s !== 'all' && <span className="kz-n">{nOf(s)}</span>}
-          </button>
-        ))}
-      </div>
+      <SubTabs items={(['all', 'company', 'department', 'project'] as const).map((s) => ({
+        to: `${pathname}?tab=kaizen${s === 'all' ? '' : `&scope=${s}`}`,
+        label: s === 'all' ? L(`すべて ${items.filter((i) => i.status !== 'dropped').length}`, `All ${items.filter((i) => i.status !== 'dropped').length}`) : `${KAIZEN_SCOPE[s]} ${nOf(s)}`,
+        active: show === s,
+      }))} />
       {list.length === 0 && !adding && <p className="muted small">{L('気づいた改善ポイントを指摘して、この90日の中で修正しきりましょう。', 'Flag what should improve, and get it fixed within these 90 days.')}</p>}
       <ul className="kaizen-list">
         {list.map((i) => {

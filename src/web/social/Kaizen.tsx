@@ -8,6 +8,9 @@ import { L } from '../i18n';
 /** 改善ポイントの指摘 → 修正。状況の値はそのまま、見せ方だけ「指摘・修正中・修正済み・見送り」 */
 export const KAIZEN_STATUS: Record<string, string> = { idea: L('指摘', 'Flagged'), doing: L('修正中', 'Fixing'), done: L('修正済み', 'Fixed'), dropped: L('見送り', 'Dropped') };
 const ORDER: Record<string, number> = { doing: 0, idea: 1, done: 2, dropped: 3 };
+/** 改善の区分：会社全体・部署・プロジェクト */
+export const KAIZEN_SCOPE: Record<string, string> = { company: L('会社', 'Company'), department: L('部署', 'Department'), project: L('プロジェクト', 'Project') };
+const scopeOf = (i: any) => i.scope ?? (i.goal_id ? 'project' : 'company');
 
 /** ミッション → ビジョン → この90日 → プロジェクト／改善 の流れ（目標のページの上） */
 export function FlowStrip({ life, term, projects, imps }: { life: any; term: any; projects: any[]; imps: any[] }) {
@@ -46,13 +49,15 @@ export function FlowStrip({ life, term, projects, imps }: { life: any; term: any
 }
 
 /** この90日の改善。改善ポイントを指摘 → 修正。プロジェクトとは別に出し、つなぐのは任意。誰でも指摘でき、期限はタームの最終日まで */
-export function KaizenList({ term, items, projects, members, onChange }: { term: any; items: any[]; projects: any[]; members: any[]; onChange: () => void }) {
+export function KaizenList({ term, items, projects, departments, members, onChange }: { term: any; items: any[]; projects: any[]; departments: any[]; members: any[]; onChange: () => void }) {
   const [adding, setAdding] = useState(false);
-  const empty = { issue: '', due_date: '', owner_user_id: '', goal_id: '' };
+  const [show, setShow] = useState<'all' | 'company' | 'department' | 'project'>('all');
+  const empty = { issue: '', due_date: '', owner_user_id: '', scope: 'company', department_id: '', goal_id: '' };
   const [f, setF] = useState(empty);
   const [err, setErr] = useState('');
   const today = todayJST();
-  const list = [...items].sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
+  const list = items.filter((i) => show === 'all' || scopeOf(i) === show).sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9));
+  const nOf = (s: string) => items.filter((i) => scopeOf(i) === s && i.status !== 'dropped').length;
   const act = async (fn: () => Promise<unknown>) => {
     setErr('');
     try {
@@ -68,6 +73,13 @@ export function KaizenList({ term, items, projects, members, onChange }: { term:
       <div className="kaizen-head">
         <span className="muted small">{L('修正済み ', 'Fixed ')}{counts.done} / {counts.all}</span>
         <button className="btn btn-small btn-ghost" onClick={() => setAdding((v) => !v)} aria-expanded={adding}>{adding ? L('閉じる', 'Close') : L('＋ 改善ポイントを指摘', '+ Flag a kaizen point')}</button>
+      </div>
+      <div className="kz-filter" role="group" aria-label={L('区分で絞り込む', 'Filter by category')}>
+        {(['all', 'company', 'department', 'project'] as const).map((s) => (
+          <button key={s} type="button" className={show === s ? 'on' : ''} aria-pressed={show === s} onClick={() => setShow(s)}>
+            {s === 'all' ? L('すべて', 'All') : KAIZEN_SCOPE[s]}{s !== 'all' && <span className="kz-n">{nOf(s)}</span>}
+          </button>
+        ))}
       </div>
       {list.length === 0 && !adding && <p className="muted small">{L('気づいた改善ポイントを指摘して、この90日の中で修正しきりましょう。', 'Flag what should improve, and get it fixed within these 90 days.')}</p>}
       <ul className="kaizen-list">
@@ -88,7 +100,11 @@ export function KaizenList({ term, items, projects, members, onChange }: { term:
                 <span className="kz-point">{i.issue || i.action}</span>
                 <FixInput item={i} onSave={(action) => act(() => patch(`/improvements/${i.id}`, i.issue ? { action } : { issue: i.action, action }))} />
                 {i.result && <span className="kz-issue">{L('結果：', 'Result: ')}{i.result}</span>}
-                {i.goal_title && <span className="kz-project">◎ {i.goal_title}</span>}
+                <span className={`kz-scope kz-scope-${scopeOf(i)}`}>
+                  {KAIZEN_SCOPE[scopeOf(i)]}
+                  {scopeOf(i) === 'department' && i.department_name && <>：{i.department_name}</>}
+                  {scopeOf(i) === 'project' && i.goal_title && <>：{i.goal_title}</>}
+                </span>
               </div>
               <div className="kz-side">
                 {i.owner_user_id && <Avatar name={i.owner_name} email={i.owner_email} src={i.owner_picture} size={22} />}
@@ -104,7 +120,7 @@ export function KaizenList({ term, items, projects, members, onChange }: { term:
           className="form kaizen-form"
           onSubmit={(e) => {
             e.preventDefault();
-            if (f.issue.trim()) act(() => post(`/terms/${term.id}/improvements`, { ...f, goal_id: f.goal_id || null })).then(() => { setF(empty); setAdding(false); });
+            if (f.issue.trim()) act(() => post(`/terms/${term.id}/improvements`, { ...f, goal_id: f.scope === 'project' ? f.goal_id || null : null, department_id: f.scope === 'department' ? f.department_id || null : null })).then(() => { setF({ ...empty, scope: f.scope }); setAdding(false); });
           }}
         >
           <label>{L('改善ポイント（指摘）', 'Kaizen point (what to fix)')}<input id="kz-issue" value={f.issue} required placeholder={L('例：定期便の2回目で解約が多い', 'e.g. Many subscribers cancel after the 2nd box')} onChange={(e) => setF({ ...f, issue: e.target.value })} /></label>
@@ -121,14 +137,33 @@ export function KaizenList({ term, items, projects, members, onChange }: { term:
               </select>
             </label>
           </div>
-          <label>
-            {L('つながるプロジェクト（任意）', 'Related project (optional)')}
-            <select id="kz-project" value={f.goal_id} onChange={(e) => setF({ ...f, goal_id: e.target.value })}>
-              <option value="">{L('なし', 'None')}</option>
-              {projects.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
-            </select>
-          </label>
-          <button className="btn btn-primary" disabled={!f.issue.trim()}>{L('指摘する', 'Flag it')}</button>
+          <div className="form-row">
+            <label>
+              {L('区分', 'Category')}
+              <select id="kz-scope" value={f.scope} onChange={(e) => setF({ ...f, scope: e.target.value })}>
+                {Object.entries(KAIZEN_SCOPE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            {f.scope === 'department' && (
+              <label>
+                {L('どの部署', 'Which department')}
+                <select id="kz-dept" value={f.department_id} required onChange={(e) => setF({ ...f, department_id: e.target.value })}>
+                  <option value="">{L('選んでください', 'Choose')}</option>
+                  {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </label>
+            )}
+            {f.scope === 'project' && (
+              <label>
+                {L('どのプロジェクト', 'Which project')}
+                <select id="kz-project" value={f.goal_id} required onChange={(e) => setF({ ...f, goal_id: e.target.value })}>
+                  <option value="">{L('選んでください', 'Choose')}</option>
+                  {projects.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
+          <button className="btn btn-primary" disabled={!f.issue.trim() || (f.scope === 'department' && !f.department_id) || (f.scope === 'project' && !f.goal_id)}>{L('指摘する', 'Flag it')}</button>
         </form>
       )}
       {err && <p className="form-error">{err}</p>}

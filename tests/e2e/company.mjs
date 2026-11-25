@@ -210,4 +210,18 @@ ok(ask.status === 'pending' && ask.kind === 'ask', 'だれでもエージェン�
 ok((await boss('GET', `/api/terms/${term.id}/project-kpis`)).requests.some((r) => r.id === ask.id), '相談が一覧に出る');
 await boss('DELETE', `/api/project-kpis/${pkpi.id}`);
 ok(!(await boss('GET', `/api/terms/${term.id}/project-kpis`)).kpis.some((k) => k.id === pkpi.id), '指標を消すと実績も消える');
+
+// 改善の区分：会社／部署／プロジェクト
+const kc = await staff('POST', `/api/terms/${term.id}/improvements`, { issue: '会議室の予約が重なる', scope: 'company' });
+ok(kc.scope === 'company' && kc.goal_id === null && kc.department_id === null, '会社全体の改善を出せる');
+const kd = await staff('POST', `/api/terms/${term.id}/improvements`, { issue: '出荷の締め時間があいまい', scope: 'department', department_id: dep.id });
+ok(kd.scope === 'department' && kd.department_id === dep.id && kd.department_name === 'EC', '部署の改善を出せ、部署名が付く');
+let noDep = ''; try { await staff('POST', `/api/terms/${term.id}/improvements`, { issue: 'x', scope: 'department' }); } catch (e) { noDep = e.message; }
+ok(noDep.includes('400'), '部署を選ばない部署の改善は断る');
+let noProj = ''; try { await staff('POST', `/api/terms/${term.id}/improvements`, { issue: 'x', scope: 'project' }); } catch (e) { noProj = e.message; }
+ok(noProj.includes('400'), 'プロジェクトを選ばないプロジェクトの改善は断る');
+const kp = await staff('PATCH', `/api/improvements/${kd.id}`, { scope: 'project', goal_id: g.id });
+ok(kp.scope === 'project' && kp.goal_id === g.id && kp.department_id === null, '区分をあとから変えられる（つなぎ先も入れ替わる）');
+const legacy = await staff('POST', `/api/goals/${g.id}/improvements`, { issue: '以前の呼び方' });
+ok(legacy.scope === 'project', 'プロジェクトから出した改善はプロジェクトの区分になる');
 console.log('ALL OK');
